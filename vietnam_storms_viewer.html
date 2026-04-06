@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lịch sử Bão Việt Nam - IBTrACS</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+        }
+        
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+        
+        /* Container */
+        .container {
+            display: flex;
+            height: calc(100vh - 90px);
+        }
+        
+        /* Sidebar */
+        .sidebar {
+            width: 350px;
+            background: white;
+            overflow-y: auto;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .sidebar-section {
+            padding: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .sidebar-section h3 {
+            margin-bottom: 15px;
+            color: #333;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+        
+        /* Filters */
+        .filter-group {
+            margin-bottom: 15px;
+        }
+        
+        .filter-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #666;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        
+        .filter-group select,
+        .filter-group input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            background: white;
+        }
+        
+        .filter-group input[type="range"] {
+            padding: 0;
+        }
+        
+        .range-value {
+            text-align: center;
+            margin-top: 5px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .cat-label {
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: bold;
+            color: white;
+            font-size: 0.85em;
+        }
+        /* Màu sắc theo tiêu chuẩn nhận diện bão */
+        .cat-low { background-color: #3498db; }    /* Áp thấp */
+        .cat-storm { background-color: #f1c40f; color: black; } /* Bão */
+        .cat-strong { background-color: #e67e22; } /* Bão mạnh */
+        .cat-very-strong { background-color: #e74c3c; } /* Rất mạnh */
+        .cat-super { background-color: #8e44ad; }  /* Siêu bão */
+        
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            width: 100%;
+            margin-top: 10px;
+            transition: background 0.3s;
+        }
+        
+        button:hover {
+            background: #5568d3;
+        }
+        
+        button.secondary {
+            background: #6c757d;
+        }
+        
+        button.secondary:hover {
+            background: #5a6268;
+        }
+        
+        /* Map */
+        #map {
+            flex: 1;
+            height: 100%;
+        }
+        
+        /* Storm List */
+        .storm-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .storm-item {
+            padding: 12px;
+            border: 1px solid #eee;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: white;
+        }
+        
+        .storm-item:hover {
+            background: #f8f9ff;
+            border-color: #667eea;
+            transform: translateX(5px);
+        }
+        
+        .storm-item.selected {
+            background: #e8ebff;
+            border-color: #667eea;
+        }
+        
+        .storm-name {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 3px;
+        }
+        
+        .storm-info {
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .wind-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            color: white;
+            margin-left: 5px;
+        }
+        
+        /* Legend */
+        .legend {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+            min-width: 200px;
+        }
+        
+        .legend h4 {
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+            font-size: 12px;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 3px;
+            margin-right: 8px;
+            border-radius: 2px;
+        }
+        
+        /* Loading */
+        .loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255,255,255,0.95);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .loading-text {
+            color: #667eea;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        /* Charts */
+        .chart-container {
+            height: 200px;
+            margin-top: 10px;
+        }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                height: 40vh;
+            }
+            
+            #map {
+                height: 60vh;
+            }
+            
+            .legend {
+                bottom: 10px;
+                right: 10px;
+                font-size: 11px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <div class="loading-text">Đang tải dữ liệu bão...</div>
+    </div>
+
+    <!-- Header -->
+    <div class="header">
+        <h1>🌀 Lịch sử Bão & Áp thấp Nhiệt đới - Vùng biển Việt Nam</h1>
+        <p>Dữ liệu từ NOAA IBTrACS v04r01 | 1884 - 2025</p>
+    </div>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <!-- Statistics -->
+            <div class="sidebar-section">
+                <h3>📊 Thống kê tổng quan</h3>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalStorms">0</div>
+                        <div class="stat-label">Tổng số bão</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="displayedStorms">0</div>
+                        <div class="stat-label">Đang hiển thị</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="yearRange">-</div>
+                        <div class="stat-label">Khoảng thời gian</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="avgPerYear">0</div>
+                        <div class="stat-label">Trung bình/năm</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="sidebar-section">
+                <h3>🔍 Bộ lọc</h3>
+                
+                <div class="filter-group">
+                    <label>Năm</label>
+                    <select id="yearFilter">
+                        <option value="all">Tất cả các năm</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label>Tháng</label>
+                    <select id="monthFilter">
+                        <option value="all">Tất cả các tháng</option>
+                        <option value="1">Tháng 1</option>
+                        <option value="2">Tháng 2</option>
+                        <option value="3">Tháng 3</option>
+                        <option value="4">Tháng 4</option>
+                        <option value="5">Tháng 5</option>
+                        <option value="6">Tháng 6</option>
+                        <option value="7">Tháng 7</option>
+                        <option value="8">Tháng 8</option>
+                        <option value="9">Tháng 9</option>
+                        <option value="10">Tháng 10</option>
+                        <option value="11">Tháng 11</option>
+                        <option value="12">Tháng 12</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label>Cường độ gió tối thiểu (km/h)</label>
+                    <input type="range" id="windFilter" min="0" max="200" value="0" step="10">
+                    <div class="range-value"><span id="windValue">0</span> km/h</div>
+                </div>
+
+                <button onclick="applyFilters()">Áp dụng bộ lọc</button>
+                <button class="secondary" onclick="resetFilters()">Đặt lại</button>
+            </div>
+
+            <!-- Chart -->
+            <div class="sidebar-section">
+                <h3>📈 Thống kê theo năm</h3>
+                <div class="chart-container">
+                    <canvas id="yearlyChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Storm List -->
+            <div class="sidebar-section" style="flex: 1;">
+                <h3>🌪️ Danh sách bão (<span id="listCount">0</span>)</h3>
+                <div class="storm-list" id="stormList"></div>
+            </div>
+        </div>
+
+        <!-- Map -->
+        <div style="position: relative; flex: 1;">
+            <div id="map"></div>
+            
+            <!-- Legend -->
+            <div class="legend">
+                <h4>Cấp bão (theo gió)</h4>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #3498db;"></div>
+                    <span>39-61 km/h (Áp thấp nhiệt đới)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #f1c40f;"></div>
+                    <span>62-88 km/h (Bão thường)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #e67e22;"></div>
+                    <span>89-117 km/h (Bão mạnh)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #e74c3c;"></div>
+                    <span>118-183 km/h (Bão rất mạnh)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #8e44ad;"></div>
+                    <span>> 183 km/h (Siêu bão)</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <script>
+        // Global variables
+        let map;
+        let allStorms = [];
+        let filteredStorms = [];
+        let stormLayers = {};
+        let selectedStorm = null;
+        let yearlyChart = null;
+
+        // Initialize map
+        function initMap() {
+            map = L.map('map').setView([15, 110], 5);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 18,
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+        }
+
+        function getVNColor(category) {
+            if (!category) return '#95a5a6'; // Màu xám nếu không có dữ liệu
+            
+            if (category.includes('Siêu bão')) return '#8e44ad';      // Tím
+            if (category.includes('Bão rất mạnh')) return '#e74c3c';      // Đỏ đậm
+            if (category.includes('Bão mạnh')) return '#e67e22';      // Cam đậm
+            if (category.includes('Bão thường')) return '#f1c40f';           // Vàng
+            if (category.includes('Áp thấp nhiệt đới')) return '#3498db';       // Xanh dương
+            
+            return '#95a5a6';
+        }
+
+        // Format storm name
+        function formatStormName(name) {
+            if (!name || name === 'UNKNOWN' || name === 'NOT_NAMED' || name === 'nan') {
+                return 'Không tên';
+            }
+            return name.toUpperCase();
+        }
+
+        // Load storm data
+        async function loadStormData() {
+            try {
+                const response = await fetch('output/vietnam_storms.geojson');
+                const data = await response.json();
+                
+                allStorms = data.features;
+                filteredStorms = [...allStorms];
+                
+                displayStorms();
+                updateStatistics();
+                updateYearFilter();
+                createYearlyChart();
+                
+                document.getElementById('loading').style.display = 'none';
+            } catch (error) {
+                console.error('Error loading data:', error);
+                document.getElementById('loading').innerHTML = `
+                    <div style="color: red; text-align: center;">
+                        <h2>⚠️ Lỗi tải dữ liệu</h2>
+                        <p>Không tìm thấy file 'output/vietnam_storms.geojson'</p>
+                        <p>Vui lòng chạy script Python trước: <code>python update_storm_data.py</code></p>
+                    </div>
+                `;
+            }
+        }
+
+// Display storms on map
+        function displayStorms() {
+            // Clear existing layers
+            Object.values(stormLayers).forEach(layer => map.removeLayer(layer));
+            stormLayers = {};
+
+            // Add new layers
+            filteredStorms.forEach((storm, index) => {
+                const props = storm.properties;
+                
+                // Lấy màu dựa trên cấp bão VN
+                const stormColor = getVNColor(props.vn_category);
+                
+                const layer = L.geoJSON(storm, {
+                    style: {
+                        color: stormColor, // Sử dụng màu mới
+                        weight: 2,
+                        opacity: 0.8       // Tăng độ đậm lên một chút cho dễ nhìn
+                    },
+                    onEachFeature: (feature, layer) => {
+                        // Sử dụng km/h trực tiếp từ dữ liệu
+                        const windKmh = props.max_wind_kmh ? Math.round(props.max_wind_kmh) : '--';
+                        
+                        const popupContent = `
+                            <div style="min-width: 220px;">
+                                <h3 style="margin: 0 0 10px 0; color: ${stormColor}; border-bottom: 1px solid #eee; padding-bottom: 5px;">
+                                    ${formatStormName(props.name)}
+                                </h3>
+                                <table style="width: 100%; font-size: 13px; line-height: 1.5;">
+                                    <tr>
+                                        <td><strong>Cấp bão (VN):</strong></td>
+                                        <td><span style="background:${stormColor}; color:white; padding:2px 6px; border-radius:4px; font-size:11px; font-weight:bold;">
+                                            ${props.vn_category || 'Chưa xác định'}
+                                        </span></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Năm:</strong></td>
+                                        <td>${props.season}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Gió max:</strong></td>
+                                        <td>${windKmh} km/h</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Áp suất min:</strong></td>
+                                        <td>${props.min_pressure_mb ? props.min_pressure_mb + ' mb' : 'N/A'}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Thời gian:</strong></td>
+                                        <td>${props.start_time ? new Date(props.start_time).toLocaleDateString('vi-VN') : '--'}</td>
+                                    </tr>
+                                </table>
+                            </div>
+                        `;
+                        layer.bindPopup(popupContent);
+                        
+                        layer.on('click', () => {
+                            highlightStorm(props.sid);
+                        });
+                    }
+                }).addTo(map);
+
+                stormLayers[props.sid] = layer;
+            });
+
+            updateStormList();
+            updateDisplayedCount();
+        }
+
+        // Update storm list
+        function updateStormList() {
+            const listDiv = document.getElementById('stormList');
+            
+            // Sort by year (newest first)
+            const sorted = [...filteredStorms].sort((a, b) => {
+                return parseInt(b.properties.season) - parseInt(a.properties.season);
+            });
+
+            listDiv.innerHTML = sorted.map(storm => {
+                const props = storm.properties;
+                // Sử dụng hàm màu mới
+                const badgeColor = getVNColor(props.vn_category); 
+                
+                return `
+                    <div class="storm-item" onclick="highlightStorm('${props.sid}')">
+                        <div class="storm-name">
+                            ${formatStormName(props.name)}
+                            <span class="wind-badge" style="background: ${badgeColor}; color: white;">
+                                ${props.vn_category ? props.vn_category.split('(')[0] : 'N/A'}
+                            </span>
+                        </div>
+                        <div class="storm-info">
+                            Năm ${props.season} • Gió ${props.max_wind_kmh ? Math.round(props.max_wind_kmh) : '--'} km/h
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('listCount').textContent = sorted.length;
+        }
+
+        // Highlight storm
+        function highlightStorm(sid) {
+            // Remove previous highlight
+            if (selectedStorm) {
+                const prevLayer = stormLayers[selectedStorm];
+                if (prevLayer) {
+                    prevLayer.setStyle({ weight: 2, opacity: 0.7 });
+                }
+            }
+
+            // Highlight new storm
+            selectedStorm = sid;
+            const layer = stormLayers[sid];
+            if (layer) {
+                layer.setStyle({ weight: 4, opacity: 1 });
+                map.fitBounds(layer.getBounds());
+                layer.openPopup();
+            }
+
+            // Update list selection
+            document.querySelectorAll('.storm-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            const selectedItem = Array.from(document.querySelectorAll('.storm-item'))
+                .find(item => item.onclick.toString().includes(sid));
+            if (selectedItem) {
+                selectedItem.classList.add('selected');
+                selectedItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }
+
+        // Update statistics
+        function updateStatistics() {
+            const total = allStorms.length;
+            
+            // Year range
+            const years = allStorms.map(s => parseInt(s.properties.season)).filter(y => !isNaN(y));
+            const minYear = Math.min(...years);
+            const maxYear = Math.max(...years);
+            const yearSpan = maxYear - minYear + 1;
+            
+            // Average per year
+            const avgPerYear = (total / yearSpan).toFixed(1);
+            
+            document.getElementById('totalStorms').textContent = total;
+            document.getElementById('yearRange').textContent = `${minYear}-${maxYear}`;
+            document.getElementById('avgPerYear').textContent = avgPerYear;
+        }
+
+        // Update displayed count
+        function updateDisplayedCount() {
+            document.getElementById('displayedStorms').textContent = filteredStorms.length;
+        }
+
+        // Update year filter options
+        function updateYearFilter() {
+            const years = [...new Set(allStorms.map(s => s.properties.season))].sort((a, b) => b - a);
+            const select = document.getElementById('yearFilter');
+            
+            years.forEach(year => {
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = year;
+                select.appendChild(option);
+            });
+        }
+
+        // Create yearly chart
+        function createYearlyChart() {
+            const yearCounts = {};
+            
+            allStorms.forEach(storm => {
+                const year = storm.properties.season;
+                yearCounts[year] = (yearCounts[year] || 0) + 1;
+            });
+
+            const years = Object.keys(yearCounts).sort();
+            const counts = years.map(year => yearCounts[year]);
+
+            const ctx = document.getElementById('yearlyChart').getContext('2d');
+            yearlyChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: years,
+                    datasets: [{
+                        label: 'Số cơn bão',
+                        data: counts,
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            display: false
+                        },
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                precision: 0
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Apply filters
+        function applyFilters() {
+            const year = document.getElementById('yearFilter').value;
+            const month = document.getElementById('monthFilter').value;
+            const minWind = parseFloat(document.getElementById('windFilter').value);
+
+            filteredStorms = allStorms.filter(storm => {
+                const props = storm.properties;
+                
+                // Year filter
+                if (year !== 'all' && props.season !== year) {
+                    return false;
+                }
+
+                // Month filter
+                if (month !== 'all' && props.start_time) {
+                    const stormMonth = new Date(props.start_time).getMonth() + 1;
+                    if (stormMonth !== parseInt(month)) {
+                        return false;
+                    }
+                }
+
+                // Wind filter
+                if (minWind > 0 && (!props.max_wind_kmh || props.max_wind_kmh < minWind)) {
+                    return false;
+                }
+
+                return true;
+            });
+
+            displayStorms();
+        }
+
+        // Reset filters
+        function resetFilters() {
+            document.getElementById('yearFilter').value = 'all';
+            document.getElementById('monthFilter').value = 'all';
+            document.getElementById('windFilter').value = '0';
+            document.getElementById('windValue').textContent = '0';
+            
+            filteredStorms = [...allStorms];
+            displayStorms();
+        }
+
+        // Update wind value display
+        document.getElementById('windFilter').addEventListener('input', (e) => {
+            document.getElementById('windValue').textContent = e.target.value;
+        });
+
+        // Initialize
+        window.addEventListener('load', () => {
+            initMap();
+            loadStormData();
+        });
+    </script>
+</body>
+</html>
