@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>📚 Lịch sử Bão Việt Nam – M1</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+
+  <style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', sans-serif; background: #0f1923; color: #e2e8f0; height: 100vh; overflow: hidden; }
+
+  /* ── NAV BAR ── */
+  #nav {
+    display: flex; align-items: center; gap: 0;
+    height: 40px; background: #0d1e30;
+    border-bottom: 1px solid #1a3a5c; flex-shrink: 0;
+    padding: 0 16px;
+  }
+  .nav-brand { font-size: 13px; font-weight: 700; color: #60a5fa; margin-right: 20px; white-space: nowrap; }
+  .nav-link {
+    display: flex; align-items: center; gap: 6px;
+    height: 40px; padding: 0 14px; font-size: 12px; font-weight: 600;
+    color: #7fa8d0; text-decoration: none; border-bottom: 2px solid transparent;
+    transition: all .15s; white-space: nowrap;
+  }
+  .nav-link:hover { color: #e2e8f0; background: rgba(255,255,255,.04); }
+  .nav-link.active { color: #60a5fa; border-bottom-color: #60a5fa; }
+  .nav-right { margin-left: auto; font-size: 11px; color: #2d4a6e; }
+
+  /* ── LAYOUT ── */
+  #app      { display: flex; flex-direction: column; height: 100vh; }
+  #topbar   { display: flex; align-items: center; gap: 12px; padding: 0 16px; height: 52px; background: #1a2535; border-bottom: 1px solid #2d4a6e; flex-shrink: 0; }
+  #main     { display: flex; flex: 1; overflow: hidden; }
+  #sidebar  { width: 320px; flex-shrink: 0; background: #1a2535; display: flex; flex-direction: column; border-right: 1px solid #2d4a6e; overflow: hidden; }
+  #map-wrap { flex: 1; position: relative; }
+  #map      { width: 100%; height: 100%; }
+
+  /* ── TOPBAR ── */
+  .topbar-title { font-size: 15px; font-weight: 700; color: #fff; white-space: nowrap; }
+  .topbar-sub   { font-size: 11px; color: #4a7299; margin-left: 4px; }
+  .topbar-sep   { width: 1px; height: 24px; background: #2d4a6e; flex-shrink: 0; }
+  #storm-count-badge {
+    background: rgba(96,165,250,.15); border: 1px solid rgba(96,165,250,.3);
+    border-radius: 12px; padding: 3px 10px; font-size: 11px; color: #60a5fa; font-weight: 600;
+  }
+
+  /* Toggle buttons */
+  .toggle-group { display: flex; gap: 4px; margin-left: auto; }
+  .toggle-btn {
+    padding: 5px 10px; border-radius: 6px; border: 1px solid #2d4a6e;
+    background: transparent; color: #7fa8d0; font-size: 11px; font-weight: 600;
+    cursor: pointer; transition: all .2s; white-space: nowrap;
+  }
+  .toggle-btn.active { background: #1d4ed8; border-color: #1d4ed8; color: #fff; }
+  .toggle-btn:hover:not(.active) { background: #243450; color: #e2e8f0; }
+
+  /* ── SIDEBAR ── */
+  .sb-section { padding: 12px 14px; border-bottom: 1px solid #1e3a5f; }
+  .sb-title { font-size: 11px; font-weight: 700; color: #4a7299; text-transform: uppercase; letter-spacing: .6px; margin-bottom: 8px; }
+
+  /* Filters */
+  .filter-row { display: flex; gap: 8px; align-items: center; margin-bottom: 7px; }
+  .filter-label { font-size: 11px; color: #7fa8d0; width: 52px; flex-shrink: 0; }
+  .filter-row input[type=range] { flex: 1; accent-color: #60a5fa; height: 3px; }
+  .filter-val { font-size: 11px; color: #e2e8f0; font-weight: 600; width: 36px; text-align: right; }
+
+  select.sb-select {
+    width: 100%; background: #0d1e30; border: 1px solid #2d4a6e; color: #e2e8f0;
+    padding: 5px 8px; border-radius: 6px; font-size: 12px; margin-bottom: 7px;
+  }
+  .cat-checkboxes { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+  .cat-cb { display: flex; align-items: center; gap: 5px; font-size: 11px; cursor: pointer; }
+  .cat-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+  .btn-apply {
+    width: 100%; padding: 7px; border-radius: 7px; border: none;
+    background: #1d4ed8; color: #fff; font-size: 12px; font-weight: 600;
+    cursor: pointer; margin-top: 8px; transition: background .2s;
+  }
+  .btn-apply:hover { background: #2563eb; }
+  .btn-reset  {
+    width: 100%; padding: 6px; border-radius: 7px; border: 1px solid #2d4a6e;
+    background: transparent; color: #7fa8d0; font-size: 11px;
+    cursor: pointer; margin-top: 4px; transition: all .2s;
+  }
+  .btn-reset:hover { background: #243450; color: #e2e8f0; }
+
+  /* Stats */
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .stat-box { background: #0d1e30; border-radius: 8px; padding: 8px 10px; }
+  .stat-num  { font-size: 20px; font-weight: 700; color: #60a5fa; }
+  .stat-lbl  { font-size: 10px; color: #4a7299; margin-top: 2px; }
+
+  /* Storm list */
+  #storm-list-wrap { flex: 1; overflow-y: auto; padding: 10px; }
+  .storm-item {
+    background: #1e3a5f; border: 1px solid transparent; border-radius: 8px;
+    padding: 9px 11px; margin-bottom: 6px; cursor: pointer; transition: all .15s;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .storm-item:hover { border-color: #60a5fa; background: #243450; }
+  .storm-item.selected { border-color: #60a5fa; background: #1e3a5f; }
+  .si-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .si-name { font-size: 12px; font-weight: 600; color: #e2e8f0; }
+  .si-meta { font-size: 10px; color: #4a7299; margin-top: 2px; }
+
+  /* ── STORM DETAIL PANEL ── */
+  #detail-panel {
+    position: absolute; top: 14px; right: 14px; z-index: 600;
+    width: 270px; background: rgba(26,37,53,.97);
+    border: 1px solid #2d4a6e; border-radius: 12px; padding: 14px;
+    display: none; max-height: 90vh; overflow-y: scroll;
+  }
+  #detail-panel.visible { display: block; }
+  .dp-close { position: absolute; top: 10px; right: 10px; background: none; border: none; color: #4a7299; cursor: pointer; font-size: 16px; }
+  .dp-close:hover { color: #fff; }
+  .dp-name  { font-size: 16px; font-weight: 700; margin-bottom: 10px; }
+  .dp-row   { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #1e3a5f; font-size: 12px; }
+  .dp-row:last-child { border: none; }
+  .dp-key { color: #7fa8d0; }
+  .dp-val { color: #e2e8f0; font-weight: 600; }
+
+  /* Animation controls */
+  #anim-bar {
+    position: absolute; bottom: 54px; left: 50%; transform: translateX(-50%);
+    z-index: 500; background: rgba(26,37,53,.95); backdrop-filter: blur(8px);
+    border: 1px solid #2d4a6e; border-radius: 10px; padding: 10px 16px;
+    display: none; align-items: center; gap: 10px; min-width: 320px;
+  }
+  #anim-bar.visible { display: flex; }
+  .anim-name { font-size: 12px; font-weight: 600; color: #e2e8f0; white-space: nowrap; }
+  #anim-progress { flex: 1; height: 4px; background: #1e3a5f; border-radius: 2px; overflow: hidden; }
+  #anim-fill     { height: 100%; background: #60a5fa; border-radius: 2px; width: 0%; transition: width .3s; }
+  .anim-time { font-size: 10px; color: #4a7299; white-space: nowrap; min-width: 120px; text-align: right; }
+  #btn-anim-stop { background: #7f1d1d; border: none; color: #fff; border-radius: 6px; padding: 4px 10px; font-size: 11px; cursor: pointer; }
+
+  /* Map controls */
+  .map-btn {
+    position: absolute; z-index: 400;
+    background: rgba(26,37,53,.9); backdrop-filter: blur(6px);
+    border: 1px solid #2d4a6e; border-radius: 8px; color: #cbd5e1;
+    font-size: 11px; font-weight: 600; padding: 7px 12px; cursor: pointer; transition: all .2s;
+  }
+  .map-btn:hover { background: rgba(45,74,110,.9); color: #fff; }
+  #btn-center  { bottom: 20px; right: 14px; }
+  #loaded-info { bottom: 20px; left: 14px; font-size: 10px; padding: 5px 10px; }
+
+  /* Chart modal */
+  #chart-modal {
+    position: absolute; top: 14px; left: 334px; z-index: 600;
+    width: 480px; background: rgba(26,37,53,.97); backdrop-filter: blur(10px);
+    border: 1px solid #2d4a6e; border-radius: 12px; padding: 16px;
+    display: none;
+  }
+  #chart-modal.visible { display: block; }
+  .cm-close  { position: absolute; top: 10px; right: 10px; background: none; border: none; color: #4a7299; cursor: pointer; font-size: 16px; }
+  .cm-title  { font-size: 13px; font-weight: 700; margin-bottom: 12px; color: #e2e8f0; }
+  .cm-tabs   { display: flex; gap: 6px; margin-bottom: 12px; }
+  .cm-tab    { padding: 4px 12px; border-radius: 5px; border: 1px solid #2d4a6e; background: transparent; color: #7fa8d0; font-size: 11px; cursor: pointer; transition: all .15s; }
+  .cm-tab.active { background: #1d4ed8; border-color: #1d4ed8; color: #fff; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #2d4a6e; border-radius: 2px; }
+
+  /* ── M3 SIMILAR STORMS PANEL ── */
+  #similar-panel {
+    position: absolute; top: 14px; left: 334px; z-index: 600;
+    width: 280px; background: rgba(26,37,53,.97); backdrop-filter: blur(10px);
+    border: 1px solid #0f766e; border-radius: 12px; padding: 14px;
+    display: none; max-height: 85vh; overflow-y: auto;
+  }
+  #similar-panel.visible { display: block; }
+  .sp-close  { position: absolute; top: 10px; right: 10px; background: none; border: none; color: #4a7299; cursor: pointer; font-size: 16px; }
+  .sp-title  { font-size: 13px; font-weight: 700; color: #2dd4bf; margin-bottom: 10px; }
+  .sp-loading{ text-align:center; padding: 20px; color: #4a7299; font-size: 12px; }
+  .sim-item  {
+    background: #0d2a26; border: 1px solid #0f766e; border-radius: 8px;
+    padding: 9px 11px; margin-bottom: 7px; cursor: pointer; transition: all .15s;
+  }
+  .sim-item:hover { background: #12342f; border-color: #2dd4bf; }
+  .sim-top   { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+  .sim-name  { font-size: 12px; font-weight: 600; color: #e2e8f0; }
+  .sim-pct   { font-size: 11px; font-weight: 700; color: #2dd4bf; }
+  .sim-bar   { height: 3px; background: #1e3a5f; border-radius: 2px; overflow: hidden; margin-bottom: 5px; }
+  .sim-fill  { height: 100%; border-radius: 2px; background: #2dd4bf; }
+  .sim-meta  { font-size: 10px; color: #4a7299; }
+  .sp-legend { display: flex; gap: 10px; margin-top: 10px; padding-top: 8px; border-top: 1px solid #1e3a5f; }
+  .sp-leg-item { display: flex; align-items: center; gap: 5px; font-size: 10px; color: #7fa8d0; }
+  .sp-leg-line { width: 20px; height: 3px; border-radius: 1px; }
+
+  /* Loading overlay */
+  #loading {
+    position: absolute; inset: 0; background: rgba(15,25,35,.8);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    z-index: 9000; backdrop-filter: blur(4px);
+  }
+  .spinner { width: 40px; height: 40px; border: 3px solid #2d4a6e; border-top-color: #60a5fa; border-radius: 50%; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #loading p { margin-top: 14px; font-size: 13px; color: #7fa8d0; }
+  #loading small { color: #4a7299; font-size: 11px; margin-top: 4px; }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ── NAV BAR ── -->
+  <nav id="nav">
+    <span class="nav-brand">🌀 Storm Tracker VN</span>
+    <a href="/" class="nav-link active">📚 Lịch sử bão</a>
+    <a href="/realtime" class="nav-link">📡 Thời gian thực</a>
+    <span class="nav-right">ĐATN 2025.2 · Đặng Hồng Minh · 20225740</span>
+  </nav>
+
+  <!-- ── TOPBAR ── -->
+  <header id="topbar">
+    <span class="topbar-title">📚 Lịch sử Bão Việt Nam</span>
+    <span class="topbar-sub">1884 – 2025 · IBTrACS NOAA</span>
+    <div class="topbar-sep"></div>
+    <span id="storm-count-badge">Đang tải...</span>
+
+    <div class="toggle-group">
+      <button class="toggle-btn active" id="btn-tracks"  onclick="toggleLayer('tracks')">🗺 Track</button>
+      <button class="toggle-btn"        id="btn-heatmap" onclick="toggleLayer('heatmap')">🔥 Heatmap</button>
+      <button class="toggle-btn"        id="btn-chart"   onclick="toggleChart()">📊 Thống kê</button>
+    </div>
+  </header>
+
+  <!-- ── MAIN ── -->
+  <div id="main">
+
+    <!-- SIDEBAR -->
+    <aside id="sidebar">
+
+      <!-- Bộ lọc -->
+      <div class="sb-section">
+        <div class="sb-title">Bộ lọc</div>
+
+        <div class="filter-row">
+          <span class="filter-label">Từ năm</span>
+          <input type="range" id="year-from" min="1884" max="2025" value="1884" step="1"
+                 oninput="document.getElementById('yf-val').textContent=this.value"/>
+          <span class="filter-val" id="yf-val">1884</span>
+        </div>
+        <div class="filter-row">
+          <span class="filter-label">Đến năm</span>
+          <input type="range" id="year-to" min="1884" max="2025" value="2025" step="1"
+                 oninput="document.getElementById('yt-val').textContent=this.value"/>
+          <span class="filter-val" id="yt-val">2025</span>
+        </div>
+
+        <select class="sb-select" id="filter-month">
+          <option value="">Tất cả các tháng</option>
+          <option value="6">Tháng 6</option><option value="7">Tháng 7</option>
+          <option value="8">Tháng 8</option><option value="9">Tháng 9</option>
+          <option value="10">Tháng 10</option><option value="11">Tháng 11</option>
+          <option value="12">Tháng 12</option><option value="1">Tháng 1</option>
+          <option value="2">Tháng 2</option><option value="3">Tháng 3</option>
+          <option value="4">Tháng 4</option><option value="5">Tháng 5</option>
+        </select>
+
+        <div class="sb-title" style="margin-top:4px">Cấp độ bão</div>
+        <div class="cat-checkboxes">
+          <label class="cat-cb"><input type="checkbox" class="cat-filter" value="TD"  checked/><div class="cat-dot" style="background:#6EC1EA"></div>Áp thấp</label>
+          <label class="cat-cb"><input type="checkbox" class="cat-filter" value="TS"  checked/><div class="cat-dot" style="background:#4DFFFF"></div>Bão thường</label>
+          <label class="cat-cb"><input type="checkbox" class="cat-filter" value="STS" checked/><div class="cat-dot" style="background:#C0FFC0"></div>Bão mạnh</label>
+          <label class="cat-cb"><input type="checkbox" class="cat-filter" value="TY"  checked/><div class="cat-dot" style="background:#FF738A"></div>Bão rất mạnh</label>
+          <label class="cat-cb"><input type="checkbox" class="cat-filter" value="STY" checked/><div class="cat-dot" style="background:#A188FC"></div>Siêu bão</label>
+        </div>
+
+        <button class="btn-apply" onclick="applyFilters()">✔ Áp dụng bộ lọc</button>
+        <button class="btn-reset" onclick="resetFilters()">↺ Đặt lại</button>
+      </div>
+
+      <!-- Thống kê nhanh -->
+      <div class="sb-section">
+        <div class="sb-title">Thống kê hiển thị</div>
+        <div class="stat-grid">
+          <div class="stat-box"><div class="stat-num" id="s-total">–</div><div class="stat-lbl">Cơn bão</div></div>
+          <div class="stat-box"><div class="stat-num" id="s-sty" style="color:#ff6b6b">–</div><div class="stat-lbl">Siêu bão</div></div>
+          <div class="stat-box"><div class="stat-num" id="s-years">–</div><div class="stat-lbl">Năm dữ liệu</div></div>
+          <div class="stat-box"><div class="stat-num" id="s-max">–</div><div class="stat-lbl">Gió max (kt)</div></div>
+        </div>
+      </div>
+
+      <!-- Danh sách bão -->
+      <div class="sb-title" style="padding: 10px 14px 4px; flex-shrink:0">
+        Danh sách
+        <span id="list-count" style="color:#4a7299;font-weight:400;font-size:10px;margin-left:4px"></span>
+      </div>
+      <div id="storm-list-wrap">
+        <div style="text-align:center;padding:30px;color:#4a7299;font-size:12px">Đang tải dữ liệu...</div>
+      </div>
+    </aside>
+
+    <!-- MAP -->
+    <div id="map-wrap">
+      <div id="map"></div>
+
+      <!-- Loading overlay -->
+      <div id="loading">
+        <div class="spinner"></div>
+        <p>Đang tải dữ liệu bão lịch sử...</p>
+        <small id="loading-detail">Vui lòng chờ</small>
+      </div>
+
+      <!-- Detail panel -->
+      <div id="detail-panel">
+
+      <!-- M3 Similar storms panel -->
+      <div id="similar-panel">
+        <button class="sp-close" onclick="closeSimilar()">✕</button>
+        <div class="sp-title">🔍 Bão lịch sử tương tự (DTW)</div>
+        <div id="similar-content"><div class="sp-loading">Đang tính toán...</div></div>
+      </div>
+        <button class="dp-close" onclick="closeDetail()">✕</button>
+        <div id="detail-content"></div>
+      </div>
+
+      <!-- Chart modal -->
+      <div id="chart-modal">
+        <button class="cm-close" onclick="toggleChart()">✕</button>
+        <div class="cm-title">📊 Phân tích thống kê bão lịch sử</div>
+        <div class="cm-tabs">
+          <button class="cm-tab active" onclick="switchChart('year')">Theo năm</button>
+          <button class="cm-tab"        onclick="switchChart('month')">Theo tháng</button>
+          <button class="cm-tab"        onclick="switchChart('cat')">Theo cấp độ</button>
+        </div>
+        <canvas id="main-chart" height="180"></canvas>
+      </div>
+
+      <!-- Animation bar -->
+      <div id="anim-bar">
+        <span class="anim-name" id="anim-name">–</span>
+        <div id="anim-progress"><div id="anim-fill"></div></div>
+        <span class="anim-time" id="anim-time">–</span>
+        <button id="btn-anim-stop" onclick="stopAnimation()">■ Dừng</button>
+      </div>
+
+      <!-- Map buttons -->
+      <button class="map-btn" id="btn-center" onclick="centerMap()">🎯 Biển Đông</button>
+      <div class="map-btn" id="loaded-info" style="cursor:default"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════════
+// CONFIG
+// ════════════════════════════════════════════════════════════════
+const DATA_URL   = '/api/historical-storms';
+const CAT_COLORS = { TD:'#6EC1EA', TS:'#4DFFFF', STS:'#C0FFC0', TY:'#FF738A', STY:'#A188FC' };
+const MONTHS_VI  = ['','T1','T2','T3','T4','T5','T6','T7','T8','T9','T10','T11','T12'];
+
+function categoryColor(cat, fallback = '#fff') {
+  return CAT_COLORS[cat?.code] || cat?.color || fallback;
+}
+
+// ════════════════════════════════════════════════════════════════
+// BẢN ĐỒ
+// ════════════════════════════════════════════════════════════════
+const map = L.map('map', { zoomControl: false, preferCanvas: true })
+             .setView([15, 113], 5);
+
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  attribution: '© OpenStreetMap, © CartoDB', maxZoom: 18,
+}).addTo(map);
+L.control.zoom({ position: 'topright' }).addTo(map);
+
+// Vùng biển Việt Nam
+L.rectangle([[8.5, 102.1],[23.4,109.5]], {
+  color:'#60a5fa', weight:1, fill:false, dashArray:'4 4', opacity:.35,
+}).addTo(map).bindTooltip('Vùng biển Việt Nam', {permanent:false});
+
+// ════════════════════════════════════════════════════════════════
+// LAYERS
+// ════════════════════════════════════════════════════════════════
+const layerTracks  = L.layerGroup().addTo(map);
+let   layerHeatmap = null;
+let   layerAnim    = L.layerGroup().addTo(map);
+const layerSimilar = L.layerGroup().addTo(map);  // M3
+const layerSelected = L.layerGroup().addTo(map); // bão đang chọn - luôn trên cùng
+let   showHeatmap  = false;
+let   showTracks   = true;
+
+// ════════════════════════════════════════════════════════════════
+// DATA
+// ════════════════════════════════════════════════════════════════
+let allStorms    = [];   // GeoJSON features
+let shownStorms  = [];   // sau khi lọc
+let geoData      = null;
+let chartInst    = null;
+let currentChart = 'year';
+let selectedId   = null;
+let animTimer    = null;
+
+// ════════════════════════════════════════════════════════════════
+// LOAD DATA
+// ════════════════════════════════════════════════════════════════
+async function loadData() {
+  setLoading('Đang tải file GeoJSON...');
+  try {
+    const res  = await fetch(DATA_URL);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    setLoading('Đang phân tích dữ liệu...');
+    geoData   = await res.json();
+    allStorms  = geoData.features || [];
+    setLoading(`Đang vẽ ${allStorms.length.toLocaleString()} cơn bão...`);
+    await new Promise(r => setTimeout(r, 50)); // yield to render
+    shownStorms = [...allStorms];
+    renderTracks(shownStorms);
+    renderList(shownStorms);
+    updateStats(shownStorms);
+    buildHeatmap(shownStorms);
+    updateBadge(shownStorms.length);
+    hideLoading();
+  } catch(e) {
+    document.getElementById('loading-detail').textContent = 'Không tải được file: ' + e.message;
+    document.getElementById('loading').querySelector('p').textContent = '❌ Lỗi tải dữ liệu';
+    console.error(e);
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+// RENDER TRACKS (gradient màu theo cường độ từng đoạn)
+// ════════════════════════════════════════════════════════════════
+function renderTracks(storms) {
+  layerTracks.clearLayers();
+  const renderer = L.canvas({ padding: 0.5 });
+
+  for (const f of storms) {
+    const pts  = f.properties.track_points;
+    if (!pts || pts.length < 2) continue;
+
+    // Vẽ từng đoạn với màu riêng
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p0 = pts[i], p1 = pts[i+1];
+      const w  = p0.wind_kt || 0;
+      L.polyline(
+        [[p0.lat, p0.lon],[p1.lat, p1.lon]],
+        { color: windColor(w), weight: 2.5, opacity: 0.75, renderer }
+      ).addTo(layerTracks);
+    }
+
+    // Điểm cuối (vị trí đổ bộ / kết thúc)
+    const last = pts[pts.length-1];
+    L.circleMarker([last.lat, last.lon], {
+      radius:3, color: windColor(last.wind_kt||0),
+      fillColor: windColor(last.wind_kt||0), fillOpacity:1, weight:0, renderer,
+    }).addTo(layerTracks)
+      .on('click', () => showDetail(f));
+
+    // Điểm đầu (vị trí hình thành)
+    const first = pts[0];
+    L.circleMarker([first.lat, first.lon], {
+      radius:3, color:'#ffffff', fillColor:'#ffffff', fillOpacity:.5, weight:0, renderer,
+    }).addTo(layerTracks)
+      .on('click', () => showDetail(f));
+
+    // Polyline vô hình để bắt click toàn đường
+    const coords = pts.map(p => [p.lat, p.lon]);
+    L.polyline(coords, { opacity:0, weight:8 })
+      .addTo(layerTracks)
+      .on('click', () => showDetail(f));
+  }
+
+  if (!showTracks) layerTracks.remove();
+}
+
+// ════════════════════════════════════════════════════════════════
+// HEATMAP
+// ════════════════════════════════════════════════════════════════
+function buildHeatmap(storms) {
+  if (layerHeatmap) { layerHeatmap.remove(); layerHeatmap = null; }
+  const pts = [];
+  for (const f of storms) {
+    for (const p of (f.properties.track_points || [])) {
+      const w = (p.wind_kt||0) / 100;
+      pts.push([p.lat, p.lon, Math.min(w + 0.3, 1.0)]);
+    }
+  }
+  layerHeatmap = L.heatLayer(pts, {
+    radius:18, blur:20, maxZoom:8,
+    gradient:{ 0.2:'#6EC1EA', 0.45:'#4DFFFF', 0.65:'#C0FFC0', 0.82:'#FF738A', 1.0:'#A188FC' },
+  });
+  if (showHeatmap) layerHeatmap.addTo(map);
+}
+
+// ════════════════════════════════════════════════════════════════
+// DANH SÁCH BÃO (sidebar)
+// ════════════════════════════════════════════════════════════════
+function renderList(storms) {
+  const wrap = document.getElementById('storm-list-wrap');
+  document.getElementById('list-count').textContent = `(${storms.length.toLocaleString()})`;
+
+  if (!storms.length) {
+    wrap.innerHTML = '<div style="text-align:center;padding:30px;color:#4a7299;font-size:12px">Không có cơn bão nào khớp bộ lọc.</div>';
+    return;
+  }
+
+  // Chỉ render 200 item đầu để tránh DOM quá nặng
+  const MAX_LIST = 200;
+  const sorted   = [...storms].sort((a,b) => b.properties.season - a.properties.season);
+  let html = '';
+  for (const f of sorted.slice(0, MAX_LIST)) {
+    const p   = f.properties;
+    const cat = p.max_category;
+    html += `<div class="storm-item" data-id="${p.sid}" onclick="selectStorm('${p.sid}')">
+      <div class="si-dot" style="background:${categoryColor(cat)}"></div>
+      <div>
+        <div class="si-name">${p.name}</div>
+        <div class="si-meta">${p.season} · ${cat.code} · ${p.max_wind_kt}kt · ${p.point_count} điểm</div>
+      </div>
+    </div>`;
+  }
+  if (storms.length > MAX_LIST) {
+    html += `<div style="text-align:center;padding:10px;color:#4a7299;font-size:11px">... và ${(storms.length-MAX_LIST).toLocaleString()} cơn bão khác</div>`;
+  }
+  wrap.innerHTML = html;
+}
+
+// ════════════════════════════════════════════════════════════════
+// THỐNG KÊ
+// ════════════════════════════════════════════════════════════════
+function updateStats(storms) {
+  const sty   = storms.filter(f => f.properties.max_category.code === 'STY').length;
+  const years = new Set(storms.map(f => f.properties.season)).size;
+  const maxW  = Math.max(0, ...storms.map(f => f.properties.max_wind_kt || 0));
+  document.getElementById('s-total').textContent = storms.length.toLocaleString();
+  document.getElementById('s-sty').textContent   = sty.toLocaleString();
+  document.getElementById('s-years').textContent = years.toLocaleString();
+  document.getElementById('s-max').textContent   = maxW || '–';
+}
+
+// ════════════════════════════════════════════════════════════════
+// FILTERS
+// ════════════════════════════════════════════════════════════════
+function applyFilters() {
+  const yFrom  = +document.getElementById('year-from').value;
+  const yTo    = +document.getElementById('year-to').value;
+  const month  = document.getElementById('filter-month').value;
+  const cats   = [...document.querySelectorAll('.cat-filter:checked')].map(c => c.value);
+
+  shownStorms = allStorms.filter(f => {
+    const p = f.properties;
+    if (p.season < yFrom || p.season > yTo) return false;
+    if (!cats.includes(p.max_category.code)) return false;
+    if (month) {
+      const hasMonth = (p.track_points||[]).some(pt => {
+        try { return new Date(pt.time).getMonth()+1 === +month; } catch { return false; }
+      });
+      if (!hasMonth) return false;
+    }
+    return true;
+  });
+
+  setLoading(`Đang vẽ ${shownStorms.length.toLocaleString()} cơn bão...`);
+  setTimeout(() => {
+    renderTracks(shownStorms);
+    renderList(shownStorms);
+    updateStats(shownStorms);
+    buildHeatmap(shownStorms);
+    updateBadge(shownStorms.length);
+    hideLoading();
+  }, 30);
+}
+
+function resetFilters() {
+  document.getElementById('year-from').value = 1884;
+  document.getElementById('year-to').value   = 2025;
+  document.getElementById('yf-val').textContent = 1884;
+  document.getElementById('yt-val').textContent  = 2025;
+  document.getElementById('filter-month').value  = '';
+  document.querySelectorAll('.cat-filter').forEach(c => c.checked = true);
+  shownStorms = [...allStorms];
+  renderTracks(shownStorms);
+  renderList(shownStorms);
+  updateStats(shownStorms);
+  buildHeatmap(shownStorms);
+  updateBadge(shownStorms.length);
+}
+
+// ════════════════════════════════════════════════════════════════
+// SELECT + DETAIL
+// ════════════════════════════════════════════════════════════════
+function selectStorm(sid) {
+  selectedId = sid;
+  document.querySelectorAll('.storm-item').forEach(el =>
+    el.classList.toggle('selected', el.dataset.id === sid));
+  const f = allStorms.find(x => x.properties.sid === sid);
+  if (!f) return;
+  showDetail(f);
+
+  // Ẩn toàn bộ track → chỉ vẽ bão được chọn nổi bật
+  layerTracks.remove();
+  layerSelected.clearLayers();
+  const coords  = f.geometry.coordinates;
+  const latlngs = coords.map(c => [c[1], c[0]]);
+  const col     = categoryColor(f.properties.max_category);
+  L.polyline(latlngs, { color:'#ffffff', weight:7, opacity:0.3 }).addTo(layerSelected);
+  L.polyline(latlngs, { color:col, weight:4, opacity:1 }).addTo(layerSelected);
+  L.circleMarker(latlngs[latlngs.length-1], {
+    radius:7, color:'#fff', weight:2, fillColor:col, fillOpacity:1,
+  }).addTo(layerSelected);
+
+  if (latlngs.length) map.flyTo(latlngs[0], 6, { duration:1 });
+}
+
+function showDetail(f) {
+  const p   = f.properties;
+  const cat = p.max_category;
+  const pts = p.track_points || [];
+  const t0  = pts[0]?.time?.slice(0,10)  || '–';
+  const t1  = pts[pts.length-1]?.time?.slice(0,10) || '–';
+
+  document.getElementById('detail-content').innerHTML = `
+    <div class="dp-name">🌀 ${p.name} (${p.season})</div>
+    <div class="dp-row"><span class="dp-key">Phân cấp max</span>
+      <span class="dp-val" style="color:${categoryColor(cat)}">${cat.code} – ${cat.name}</span></div>
+    <div class="dp-row"><span class="dp-key">Gió tối đa</span>
+      <span class="dp-val">${p.max_wind_kt} kt (${Math.round(p.max_wind_kt*1.852)} km/h)</span></div>
+    <div class="dp-row"><span class="dp-key">Thời gian</span>
+      <span class="dp-val">${t0} → ${t1}</span></div>
+    <div class="dp-row"><span class="dp-key">Số điểm quan trắc</span>
+      <span class="dp-val">${pts.length}</span></div>
+    <div style="margin-top:10px">
+      <button onclick="startAnimation('${p.sid}')"
+        style="width:100%;padding:7px;border-radius:7px;border:none;background:#1d4ed8;color:#fff;font-size:12px;font-weight:600;cursor:pointer">
+        ▶ Phát lại đường đi
+      </button>
+      <button onclick="findSimilarStorms('${p.sid}')"
+        style="width:100%;margin-top:6px;padding:7px;border-radius:7px;border:none;background:#0f766e;color:#fff;font-size:12px;font-weight:600;cursor:pointer">
+        🔍 Tìm bão lịch sử tương tự (M3)
+      </button>
+    </div>`;
+  document.getElementById('detail-panel').classList.add('visible');
+}
+
+function closeDetail() {
+  document.getElementById('detail-panel').classList.remove('visible');
+  stopAnimation();
+  layerSelected.clearLayers();
+  closeSimilar();
+  // Khôi phục toàn bộ track
+  if (!map.hasLayer(layerTracks)) layerTracks.addTo(map);
+  selectedId = null;
+  document.querySelectorAll('.storm-item').forEach(el => el.classList.remove('selected'));
+}
+
+// ════════════════════════════════════════════════════════════════
+// ANIMATION
+// ════════════════════════════════════════════════════════════════
+function startAnimation(sid) {
+  stopAnimation();
+  const f = allStorms.find(x => x.properties.sid === sid);
+  if (!f) return;
+
+  const pts  = f.properties.track_points || [];
+  if (pts.length < 2) return;
+
+  const bar  = document.getElementById('anim-bar');
+  const fill = document.getElementById('anim-fill');
+  const name = document.getElementById('anim-name');
+  const time = document.getElementById('anim-time');
+  bar.classList.add('visible');
+  name.textContent = f.properties.name + ' (' + f.properties.season + ')';
+
+  layerAnim.clearLayers();
+  map.flyTo([pts[0].lat, pts[0].lon], 6, { duration:1 });
+
+  let idx = 0;
+  const drawnCoords = [];
+
+  animTimer = setInterval(() => {
+    if (idx >= pts.length) { stopAnimation(); return; }
+    const pt = pts[idx];
+    drawnCoords.push([pt.lat, pt.lon]);
+
+    layerAnim.clearLayers();
+    // Vẽ lại toàn bộ track đã đi (gradient)
+    for (let i = 0; i < drawnCoords.length - 1; i++) {
+      const w = pts[i].wind_kt || 0;
+      L.polyline([drawnCoords[i], drawnCoords[i+1]], {
+        color: windColor(w), weight:3.5, opacity:.9,
+      }).addTo(layerAnim);
+    }
+    // Icon vị trí hiện tại
+    const col = windColor(pt.wind_kt||0);
+    L.circleMarker([pt.lat, pt.lon], {
+      radius:7, color:'#fff', weight:2, fillColor:col, fillOpacity:1,
+    }).addTo(layerAnim);
+
+    fill.style.width = ((idx+1)/pts.length*100).toFixed(1) + '%';
+    time.textContent = (pt.time||'').slice(0,16) + ' · ' + (pt.wind_kt||0) + ' kt';
+    idx++;
+  }, 150);
+}
+
+function stopAnimation() {
+  if (animTimer) { clearInterval(animTimer); animTimer = null; }
+  document.getElementById('anim-bar').classList.remove('visible');
+  layerAnim.clearLayers();
+}
+
+// ════════════════════════════════════════════════════════════════
+// LAYER TOGGLES
+// ════════════════════════════════════════════════════════════════
+function toggleLayer(type) {
+  if (type === 'tracks') {
+    showTracks = !showTracks;
+    document.getElementById('btn-tracks').classList.toggle('active', showTracks);
+    showTracks ? layerTracks.addTo(map) : layerTracks.remove();
+  } else if (type === 'heatmap') {
+    showHeatmap = !showHeatmap;
+    document.getElementById('btn-heatmap').classList.toggle('active', showHeatmap);
+    if (showHeatmap) { if (layerHeatmap) layerHeatmap.addTo(map); }
+    else             { if (layerHeatmap) layerHeatmap.remove(); }
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+// BIỂU ĐỒ THỐNG KÊ
+// ════════════════════════════════════════════════════════════════
+function toggleChart() {
+  const modal = document.getElementById('chart-modal');
+  const show  = !modal.classList.contains('visible');
+  modal.classList.toggle('visible', show);
+  document.getElementById('btn-chart').classList.toggle('active', show);
+  if (show) buildChart(currentChart);
+}
+
+function switchChart(type) {
+  currentChart = type;
+  document.querySelectorAll('.cm-tab').forEach((t,i) =>
+    t.classList.toggle('active', ['year','month','cat'][i] === type));
+  buildChart(type);
+}
+
+function buildChart(type) {
+  const canvas = document.getElementById('main-chart');
+  if (chartInst) { chartInst.destroy(); chartInst = null; }
+
+  let labels, datasets;
+  const storms = shownStorms;
+
+  if (type === 'year') {
+    const byYear = {};
+    for (const f of storms) {
+      const y = f.properties.season;
+      if (!byYear[y]) byYear[y] = {TD:0,TS:0,STS:0,TY:0,STY:0};
+      byYear[y][f.properties.max_category.code]++;
+    }
+    const years = Object.keys(byYear).sort();
+    labels = years;
+    datasets = ['TD','TS','STS','TY','STY'].map((cat,i) => ({
+      label: {TD:'Áp thấp',TS:'Bão thường',STS:'Bão mạnh',TY:'Bão rất mạnh',STY:'Siêu bão'}[cat],
+      data: years.map(y => byYear[y]?.[cat] || 0),
+      backgroundColor: Object.values(CAT_COLORS)[i] + 'bb',
+      borderColor: Object.values(CAT_COLORS)[i],
+      borderWidth: 1, stack: 'a',
+    }));
+  } else if (type === 'month') {
+    const byMonth = Array(13).fill(0);
+    for (const f of storms)
+      for (const pt of f.properties.track_points||[]) {
+        try { byMonth[new Date(pt.time).getMonth()+1]++; } catch {}
+      }
+    labels = MONTHS_VI.slice(1);
+    datasets = [{ label:'Số lần quan trắc', data: byMonth.slice(1),
+      backgroundColor:'#60a5fa88', borderColor:'#60a5fa', borderWidth:1 }];
+  } else {
+    const byCat = {TD:0,TS:0,STS:0,TY:0,STY:0};
+    for (const f of storms) byCat[f.properties.max_category.code]++;
+    labels = ['Áp thấp','Bão thường','Bão mạnh','Bão rất mạnh','Siêu bão'];
+    datasets = [{ label:'Số cơn bão', data: Object.values(byCat),
+      backgroundColor: Object.values(CAT_COLORS).map(c=>c+'bb'),
+      borderColor: Object.values(CAT_COLORS), borderWidth:1 }];
+  }
+
+  chartInst = new Chart(canvas, {
+    type: type === 'year' ? 'bar' : (type === 'cat' ? 'doughnut' : 'bar'),
+    data: { labels, datasets },
+    options: {
+      responsive:true, maintainAspectRatio:true,
+      plugins: { legend:{ labels:{ color:'#94a3b8', font:{size:11} } } },
+      scales: type === 'cat' ? {} : {
+        x:{ stacked: type==='year', ticks:{ color:'#64748b', maxRotation:60, font:{size:9} }, grid:{color:'#1e3a5f'} },
+        y:{ stacked: type==='year', ticks:{ color:'#64748b', font:{size:10} }, grid:{color:'#1e3a5f'} },
+      },
+    },
+  });
+}
+
+// ════════════════════════════════════════════════════════════════
+// HELPERS
+// ════════════════════════════════════════════════════════════════
+function windColor(kt) {
+  if (kt < 34) return CAT_COLORS.TD;
+  if (kt < 48) return CAT_COLORS.TS;
+  if (kt < 64) return CAT_COLORS.STS;
+  if (kt < 84) return CAT_COLORS.TY;
+  return CAT_COLORS.STY;
+}
+function centerMap() { map.flyTo([14,113], 5, {duration:1}); }
+function setLoading(msg) {
+  document.getElementById('loading').style.display = 'flex';
+  document.getElementById('loading-detail').textContent = msg;
+}
+function hideLoading() { document.getElementById('loading').style.display = 'none'; }
+function updateBadge(n) {
+  document.getElementById('storm-count-badge').textContent = `${n.toLocaleString()} cơn bão`;
+  document.getElementById('loaded-info').textContent = `✓ ${n.toLocaleString()} bão · IBTrACS NOAA`;
+}
+
+// ════════════════════════════════════════════════════════════════
+// M3 – TÌM BÃO TƯƠNG TỰ (DTW)
+// ════════════════════════════════════════════════════════════════
+
+// Màu cho từng rank bão tương tự (rank 1 = đậm nhất)
+const SIMILAR_COLORS = ['#2dd4bf','#22b8a8','#189a8e','#0f7a71','#0a5c56'];
+
+async function findSimilarStorms(sid) {
+  layerSimilar.clearLayers();
+  const panel = document.getElementById('similar-panel');
+  document.getElementById('similar-content').innerHTML =
+    '<div class="sp-loading">⏳ Đang tính DTW với 2000+ bão...</div>';
+  panel.classList.add('visible');
+
+  try {
+    const res  = await fetch(`/api/similar-storms/${sid}`);
+    const data = await res.json();
+    if (data.error) {
+      document.getElementById('similar-content').innerHTML =
+        `<div class="sp-loading" style="color:#ef4444">❌ ${data.error}</div>`;
+      return;
+    }
+    renderSimilarPanel(data);
+    renderSimilarMap(data);
+  } catch(e) {
+    document.getElementById('similar-content').innerHTML =
+      `<div class="sp-loading" style="color:#ef4444">❌ Lỗi kết nối API</div>`;
+  }
+}
+
+function renderSimilarPanel(data) {
+  const target  = data.target;
+  const similar = data.similar || [];
+  const elapsed = data.elapsed_ms;
+
+  let html = `<div style="font-size:10px;color:#4a7299;margin-bottom:8px">
+    So sánh với <b style="color:#7fa8d0">${data.candidate_count}</b> bão cùng vùng · ${elapsed}ms</div>`;
+
+  html += `<div style="background:#1e3a5f;border-radius:6px;padding:8px 10px;margin-bottom:10px">
+    <div style="font-size:11px;color:#7fa8d0;margin-bottom:3px">Bão gốc đang xem</div>
+    <div style="font-size:13px;font-weight:600;color:#fff">🔴 ${target.name} (${target.season})</div>
+    <div style="font-size:11px;color:#4a7299">${target.max_wind_kt} kt · ${target.max_category?.name||''}</div>
+  </div>`;
+
+  if (!similar.length) {
+    html += '<div class="sp-loading">Không có bản ghi tương tự phù hợp.</div>';
+    document.getElementById('similar-content').innerHTML = html;
+    return;
+  }
+
+  for (const s of similar) {
+    const col = SIMILAR_COLORS[s.rank - 1];
+    html += `
+    <div class="sim-item" onclick="flyToSimilar(${s.coords[s.coords.length-1][1]},${s.coords[s.coords.length-1][0]})">
+      <div class="sim-top">
+        <span class="sim-name">#${s.rank} ${s.name} (${s.season})</span>
+        <span class="sim-pct" style="color:${col}">${s.similarity_pct}%</span>
+      </div>
+      <div class="sim-bar"><div class="sim-fill" style="width:${s.similarity_pct}%;background:${col}"></div></div>
+      <div class="sim-meta">
+        ${s.max_wind_kt} kt · ${s.max_category?.name||'N/A'}<br>
+        DTW: ${s.dtw_distance} · DTW score: ${s.dtw_score ?? 'N/A'} · Cosine: ${s.cosine_score ?? 'N/A'}<br>
+        Δgió: ${s.wind_diff_kt ?? 'N/A'} kt · Δtháng: ${s.month_diff ?? 'N/A'} · Điểm đầu: ${s.start_distance_deg ?? 'N/A'}°
+      </div>
+    </div>`;
+  }
+
+  html += `<div class="sp-legend">
+    <div class="sp-leg-item"><div class="sp-leg-line" style="background:#ef4444"></div>Bão gốc</div>
+    <div class="sp-leg-item"><div class="sp-leg-line" style="background:#2dd4bf"></div>Bão tương tự</div>
+  </div>`;
+
+  document.getElementById('similar-content').innerHTML = html;
+}
+
+function renderSimilarMap(data) {
+  layerSimilar.clearLayers();
+  layerSelected.clearLayers();  // ẩn highlight cũ
+  layerTracks.remove();         // ẩn toàn bộ track khác → chỉ còn M3
+  
+  // Vẽ lại bão gốc màu đỏ đậm
+  if (data.target?.coords?.length >= 2) {
+    const latlngs = data.target.coords.map(c => [c[1], c[0]]);
+    L.polyline(latlngs, {
+      color: '#ef4444', weight: 4, opacity: 1,
+    }).addTo(layerSimilar)
+      .bindTooltip(`🔴 ${data.target.name} (${data.target.season}) — Bão gốc`, {sticky:true});
+    // Marker điểm đầu
+    L.circleMarker(latlngs[0], {
+      radius:5, color:'#ef4444', fillColor:'#ef4444', fillOpacity:1, weight:0,
+    }).addTo(layerSimilar);
+  }
+
+  // Vẽ các bão tương tự màu xanh (rank 1 = đậm, rank 5 = nhạt)
+  for (const s of (data.similar || [])) {
+    if (!s.coords || s.coords.length < 2) continue;
+    const latlngs = s.coords.map(c => [c[1], c[0]]);
+    const col     = SIMILAR_COLORS[s.rank - 1];
+    const weight  = 4 - (s.rank - 1) * 0.5;
+
+    L.polyline(latlngs, {
+      color: col, weight, opacity: 0.85, dashArray: '6 3',
+    }).addTo(layerSimilar)
+      .bindTooltip(
+        `#${s.rank} ${s.name} (${s.season})<br>${s.max_wind_kt} kt · ${s.similarity_pct}% tương đồng`,
+        {sticky: true}
+      );
+
+    L.circleMarker(latlngs[latlngs.length - 1], {
+      radius: 4, color: col, fillColor: col, fillOpacity: 1, weight: 0,
+    }).addTo(layerSimilar);
+  }
+
+  // Fit map về vùng hiển thị
+  const allCoords = [
+    ...(data.target?.coords || []),
+    ...(data.similar || []).flatMap(s => s.coords || []),
+  ];
+  if (allCoords.length > 0) {
+    const latlngs = allCoords.map(c => [c[1], c[0]]);
+    map.flyToBounds(L.latLngBounds(latlngs), { padding:[40,40], duration:1 });
+  }
+}
+
+function closeSimilar() {
+  document.getElementById('similar-panel').classList.remove('visible');
+  layerSimilar.clearLayers();
+  if (!map.hasLayer(layerTracks)) layerTracks.addTo(map); // khôi phục track
+}
+
+function flyToSimilar(lat, lon) {
+  map.flyTo([lat, lon], 6, {duration:0.8});
+}
+
+// ════════════════════════════════════════════════════════════════
+// KHỞI ĐỘNG
+// ════════════════════════════════════════════════════════════════
+loadData();
+</script>
+</body>
+</html>
