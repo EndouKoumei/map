@@ -99,10 +99,10 @@ def download_from_noaa(force: bool = False) -> str:
 # ── Phân cấp bão theo thang Việt Nam (QĐ 18/2021) ───────────────────────────
 VN_CATS = [
     {"code": "TD",  "name": "Áp thấp nhiệt đới", "min_kt": 0,  "max_kt": 33,  "color": "#6EC1EA"},
-    {"code": "TS",  "name": "Bão cấp 6–7",        "min_kt": 34, "max_kt": 47,  "color": "#4DFFFF"},
-    {"code": "STS", "name": "Bão cấp 8–9",         "min_kt": 48, "max_kt": 63,  "color": "#C0FFC0"},
-    {"code": "TY",  "name": "Bão cấp 10–11",       "min_kt": 64, "max_kt": 83,  "color": "#FF738A"},
-    {"code": "STY", "name": "Siêu bão cấp 12–15",  "min_kt": 84, "max_kt": 999, "color": "#A188FC"},
+    {"code": "TS",  "name": "Bão (bão thường)",   "min_kt": 34, "max_kt": 47,  "color": "#4DFFFF"},
+    {"code": "STS", "name": "Bão mạnh",           "min_kt": 48, "max_kt": 63,  "color": "#C0FFC0"},
+    {"code": "TY",  "name": "Bão rất mạnh",       "min_kt": 64, "max_kt": 98,  "color": "#FF738A"},
+    {"code": "STY", "name": "Siêu bão",           "min_kt": 99, "max_kt": 999, "color": "#A188FC"},
 ]
 
 def classify(wind_kt):

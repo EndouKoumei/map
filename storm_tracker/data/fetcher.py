@@ -16,9 +16,9 @@ from typing import Optional
 # ── Phân cấp bão Việt Nam (QĐ 18/2021/QĐ-TTg) ────────────────────────────────
 VN_CATS = [
     {"code":"TD",  "name":"Áp thấp nhiệt đới", "max_kt":33,  "color":"#6EC1EA", "css":"td"},
-    {"code":"TS",  "name":"Bão (bão thường)",   "max_kt":47,  "color":"#4DFFFF", "css":"ts"},
-    {"code":"STS", "name":"Bão mạnh",            "max_kt":63,  "color":"#C0FFC0", "css":"sts"},
-    {"code":"TY",  "name":"Bão rất mạnh",        "max_kt":83,  "color":"#FF738A", "css":"ty"},
+    {"code":"TS",  "name":"Bão (bão thường)",     "max_kt":47,  "color":"#4DFFFF", "css":"ts"},
+    {"code":"STS", "name":"Bão mạnh",             "max_kt":63,  "color":"#C0FFC0", "css":"sts"},
+    {"code":"TY",  "name":"Bão rất mạnh",         "max_kt":98,  "color":"#FF738A", "css":"ty"},
     {"code":"STY", "name":"Siêu bão",             "max_kt":999, "color":"#A188FC", "css":"sty"},
 ]
 

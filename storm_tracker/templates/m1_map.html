@@ -119,9 +119,16 @@
     display: none; max-height: 90vh; overflow-y: scroll;
   }
   #detail-panel.visible { display: block; }
-  .dp-close { position: absolute; top: 10px; right: 10px; background: none; border: none; color: #4a7299; cursor: pointer; font-size: 16px; }
-  .dp-close:hover { color: #fff; }
-  .dp-name  { font-size: 16px; font-weight: 700; margin-bottom: 10px; }
+  .dp-close {
+    position: absolute; top: 10px; right: 10px; z-index: 3;
+    width: 28px; height: 28px; border-radius: 50%;
+    border: 1px solid #60a5fa; background: #0d1e30; color: #e2e8f0;
+    cursor: pointer; font-size: 20px; line-height: 24px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,.35);
+  }
+  .dp-close:hover { background: #1d4ed8; border-color: #93c5fd; color: #fff; }
+  .dp-name  { font-size: 16px; font-weight: 700; margin-bottom: 10px; padding-right: 36px; }
   .dp-row   { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #1e3a5f; font-size: 12px; }
   .dp-row:last-child { border: none; }
   .dp-key { color: #7fa8d0; }
@@ -223,7 +230,7 @@
   <!-- ── TOPBAR ── -->
   <header id="topbar">
     <span class="topbar-title">📚 Lịch sử Bão Việt Nam</span>
-    <span class="topbar-sub">1884 – 2025 · IBTrACS NOAA</span>
+    <span class="topbar-sub">1884 – 2026 · IBTrACS NOAA</span>
     <div class="topbar-sep"></div>
     <span id="storm-count-badge">Đang tải...</span>
 
@@ -246,15 +253,15 @@
 
         <div class="filter-row">
           <span class="filter-label">Từ năm</span>
-          <input type="range" id="year-from" min="1884" max="2025" value="1884" step="1"
+          <input type="range" id="year-from" min="1884" max="2026" value="1884" step="1"
                  oninput="document.getElementById('yf-val').textContent=this.value"/>
           <span class="filter-val" id="yf-val">1884</span>
         </div>
         <div class="filter-row">
           <span class="filter-label">Đến năm</span>
-          <input type="range" id="year-to" min="1884" max="2025" value="2025" step="1"
+          <input type="range" id="year-to" min="1884" max="2026" value="2026" step="1"
                  oninput="document.getElementById('yt-val').textContent=this.value"/>
-          <span class="filter-val" id="yt-val">2025</span>
+          <span class="filter-val" id="yt-val">2026</span>
         </div>
 
         <select class="sb-select" id="filter-month">
@@ -269,7 +276,7 @@
 
         <div class="sb-title" style="margin-top:4px">Cấp độ bão</div>
         <div class="cat-checkboxes">
-          <label class="cat-cb"><input type="checkbox" class="cat-filter" value="TD"  checked/><div class="cat-dot" style="background:#6EC1EA"></div>Áp thấp</label>
+          <label class="cat-cb"><input type="checkbox" class="cat-filter" value="TD"  checked/><div class="cat-dot" style="background:#6EC1EA"></div>Áp thấp nhiệt đới</label>
           <label class="cat-cb"><input type="checkbox" class="cat-filter" value="TS"  checked/><div class="cat-dot" style="background:#4DFFFF"></div>Bão thường</label>
           <label class="cat-cb"><input type="checkbox" class="cat-filter" value="STS" checked/><div class="cat-dot" style="background:#C0FFC0"></div>Bão mạnh</label>
           <label class="cat-cb"><input type="checkbox" class="cat-filter" value="TY"  checked/><div class="cat-dot" style="background:#FF738A"></div>Bão rất mạnh</label>
@@ -314,17 +321,16 @@
 
       <!-- Detail panel -->
       <div id="detail-panel">
-
-      <!-- M3 Similar storms panel -->
-      <div id="similar-panel">
-        <button class="sp-close" onclick="closeSimilar()">✕</button>
-        <div class="sp-title">🔍 Bão lịch sử tương tự (DTW)</div>
-        <div id="similar-content"><div class="sp-loading">Đang tính toán...</div></div>
-      </div>
-        <button class="dp-close" onclick="closeDetail()">✕</button>
+        <button type="button" class="dp-close" onclick="closeDetail()" aria-label="Đóng thông tin">&times;</button>
         <div id="detail-content"></div>
       </div>
 
+      <!-- M3 Similar storms panel -->
+      <div id="similar-panel">
+        <button type="button" class="sp-close" onclick="closeSimilar()" aria-label="Đóng bão tương tự">&times;</button>
+        <div class="sp-title">🔍 Bão lịch sử tương tự (DTW)</div>
+        <div id="similar-content"><div class="sp-loading">Đang tính toán...</div></div>
+      </div>
       <!-- Chart modal -->
       <div id="chart-modal">
         <button class="cm-close" onclick="toggleChart()">✕</button>
@@ -358,10 +364,20 @@
 // ════════════════════════════════════════════════════════════════
 const DATA_URL   = '/api/historical-storms';
 const CAT_COLORS = { TD:'#6EC1EA', TS:'#4DFFFF', STS:'#C0FFC0', TY:'#FF738A', STY:'#A188FC' };
+const CAT_LABELS = {
+  TD:'Áp thấp nhiệt đới',
+  TS:'Bão (bão thường)',
+  STS:'Bão mạnh',
+  TY:'Bão rất mạnh',
+  STY:'Siêu bão',
+};
 const MONTHS_VI  = ['','T1','T2','T3','T4','T5','T6','T7','T8','T9','T10','T11','T12'];
 
 function categoryColor(cat, fallback = '#fff') {
   return CAT_COLORS[cat?.code] || cat?.color || fallback;
+}
+function categoryLabel(cat) {
+  return CAT_LABELS[cat?.code] || cat?.name || cat?.code || 'N/A';
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -401,6 +417,7 @@ let chartInst    = null;
 let currentChart = 'year';
 let selectedId   = null;
 let animTimer    = null;
+const TRACK_PICK_TOLERANCE_PX = 16;
 
 // ════════════════════════════════════════════════════════════════
 // LOAD DATA
@@ -456,24 +473,69 @@ function renderTracks(storms) {
       radius:3, color: windColor(last.wind_kt||0),
       fillColor: windColor(last.wind_kt||0), fillOpacity:1, weight:0, renderer,
     }).addTo(layerTracks)
-      .on('click', () => showDetail(f));
+      .on('click', () => selectStorm(f.properties.sid));
 
     // Điểm đầu (vị trí hình thành)
     const first = pts[0];
     L.circleMarker([first.lat, first.lon], {
       radius:3, color:'#ffffff', fillColor:'#ffffff', fillOpacity:.5, weight:0, renderer,
     }).addTo(layerTracks)
-      .on('click', () => showDetail(f));
+      .on('click', () => selectStorm(f.properties.sid));
 
     // Polyline vô hình để bắt click toàn đường
     const coords = pts.map(p => [p.lat, p.lon]);
-    L.polyline(coords, { opacity:0, weight:8 })
+    const hitbox = L.polyline(coords, {
+      color:'#ffffff',
+      opacity:0.01,
+      weight:18,
+      interactive:true,
+      bubblingMouseEvents:false,
+    })
       .addTo(layerTracks)
-      .on('click', () => showDetail(f));
+      .on('click', () => selectStorm(f.properties.sid));
+    hitbox.bringToFront();
   }
 
   if (!showTracks) layerTracks.remove();
 }
+function pointToSegmentDistancePx(p, a, b) {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  if (dx === 0 && dy === 0) return p.distanceTo(a);
+  const t = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / (dx * dx + dy * dy)));
+  return p.distanceTo(L.point(a.x + t * dx, a.y + t * dy));
+}
+
+function findNearestStormTrack(latlng) {
+  const clickPoint = map.latLngToLayerPoint(latlng);
+  let bestStorm = null;
+  let bestDistance = Infinity;
+
+  for (const f of shownStorms) {
+    const pts = f.properties.track_points || [];
+    if (pts.length < 2) continue;
+
+    for (let i = 0; i < pts.length - 1; i++) {
+      const a = map.latLngToLayerPoint([pts[i].lat, pts[i].lon]);
+      const b = map.latLngToLayerPoint([pts[i + 1].lat, pts[i + 1].lon]);
+      const d = pointToSegmentDistancePx(clickPoint, a, b);
+      if (d < bestDistance) {
+        bestDistance = d;
+        bestStorm = f;
+      }
+    }
+  }
+
+  return bestDistance <= TRACK_PICK_TOLERANCE_PX ? bestStorm : null;
+}
+
+map.on('click', (e) => {
+  if (selectedId || !showTracks || !map.hasLayer(layerTracks)) return;
+  const nearest = findNearestStormTrack(e.latlng);
+  if (!nearest) return;
+  if (e.originalEvent) L.DomEvent.stop(e.originalEvent);
+  selectStorm(nearest.properties.sid);
+});
 
 // ════════════════════════════════════════════════════════════════
 // HEATMAP
@@ -507,7 +569,7 @@ function renderList(storms) {
   }
 
   // Chỉ render 200 item đầu để tránh DOM quá nặng
-  const MAX_LIST = 200;
+  const MAX_LIST = storms.length;
   const sorted   = [...storms].sort((a,b) => b.properties.season - a.properties.season);
   let html = '';
   for (const f of sorted.slice(0, MAX_LIST)) {
@@ -525,6 +587,11 @@ function renderList(storms) {
     html += `<div style="text-align:center;padding:10px;color:#4a7299;font-size:11px">... và ${(storms.length-MAX_LIST).toLocaleString()} cơn bão khác</div>`;
   }
   wrap.innerHTML = html;
+}
+function focusStormInList(sid) {
+  const item = [...document.querySelectorAll('.storm-item')].find(el => el.dataset.id === sid);
+  if (!item) return;
+  item.scrollIntoView({ block: 'center', behavior: 'smooth' });
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -575,9 +642,9 @@ function applyFilters() {
 
 function resetFilters() {
   document.getElementById('year-from').value = 1884;
-  document.getElementById('year-to').value   = 2025;
+  document.getElementById('year-to').value   = 2026;
   document.getElementById('yf-val').textContent = 1884;
-  document.getElementById('yt-val').textContent  = 2025;
+  document.getElementById('yt-val').textContent  = 2026;
   document.getElementById('filter-month').value  = '';
   document.querySelectorAll('.cat-filter').forEach(c => c.checked = true);
   shownStorms = [...allStorms];
@@ -598,22 +665,38 @@ function selectStorm(sid) {
   const f = allStorms.find(x => x.properties.sid === sid);
   if (!f) return;
   showDetail(f);
+  focusStormInList(sid);
 
-  // Ẩn toàn bộ track → chỉ vẽ bão được chọn nổi bật
   layerTracks.remove();
   layerSelected.clearLayers();
-  const coords  = f.geometry.coordinates;
-  const latlngs = coords.map(c => [c[1], c[0]]);
-  const col     = categoryColor(f.properties.max_category);
-  L.polyline(latlngs, { color:'#ffffff', weight:7, opacity:0.3 }).addTo(layerSelected);
-  L.polyline(latlngs, { color:col, weight:4, opacity:1 }).addTo(layerSelected);
-  L.circleMarker(latlngs[latlngs.length-1], {
-    radius:7, color:'#fff', weight:2, fillColor:col, fillOpacity:1,
-  }).addTo(layerSelected);
+  const pts = f.properties.track_points || [];
+  const coords = f.geometry.coordinates || [];
+  const latlngs = pts.length ? pts.map(p => [p.lat, p.lon]) : coords.map(c => [c[1], c[0]]);
+  const col = categoryColor(f.properties.max_category);
 
-  if (latlngs.length) map.flyTo(latlngs[0], 6, { duration:1 });
+  if (latlngs.length >= 2) {
+    L.polyline(latlngs, { color:'#ffffff', weight:7, opacity:0.3 }).addTo(layerSelected);
+    if (pts.length >= 2) {
+      for (let i = 0; i < pts.length - 1; i++) {
+        const p0 = pts[i], p1 = pts[i + 1];
+        L.polyline([[p0.lat, p0.lon], [p1.lat, p1.lon]], {
+          color: windColor(p0.wind_kt || 0),
+          weight: 4,
+          opacity: 1,
+        }).addTo(layerSelected);
+      }
+    } else {
+      L.polyline(latlngs, { color:col, weight:4, opacity:1 }).addTo(layerSelected);
+    }
+  }
+
+  if (latlngs.length) {
+    L.circleMarker(latlngs[latlngs.length-1], {
+      radius:7, color:'#fff', weight:2, fillColor:col, fillOpacity:1,
+    }).addTo(layerSelected);
+    map.flyTo(latlngs[0], 6, { duration:1 });
+  }
 }
-
 function showDetail(f) {
   const p   = f.properties;
   const cat = p.max_category;
@@ -624,7 +707,7 @@ function showDetail(f) {
   document.getElementById('detail-content').innerHTML = `
     <div class="dp-name">🌀 ${p.name} (${p.season})</div>
     <div class="dp-row"><span class="dp-key">Phân cấp max</span>
-      <span class="dp-val" style="color:${categoryColor(cat)}">${cat.code} – ${cat.name}</span></div>
+      <span class="dp-val" style="color:${categoryColor(cat)}">${cat.code} – ${categoryLabel(cat)}</span></div>
     <div class="dp-row"><span class="dp-key">Gió tối đa</span>
       <span class="dp-val">${p.max_wind_kt} kt (${Math.round(p.max_wind_kt*1.852)} km/h)</span></div>
     <div class="dp-row"><span class="dp-key">Thời gian</span>
@@ -640,6 +723,7 @@ function showDetail(f) {
         style="width:100%;margin-top:6px;padding:7px;border-radius:7px;border:none;background:#0f766e;color:#fff;font-size:12px;font-weight:600;cursor:pointer">
         🔍 Tìm bão lịch sử tương tự (M3)
       </button>
+      
     </div>`;
   document.getElementById('detail-panel').classList.add('visible');
 }
@@ -649,13 +733,12 @@ function closeDetail() {
   stopAnimation();
   layerSelected.clearLayers();
   closeSimilar();
-  // Khôi phục toàn bộ track
-  if (!map.hasLayer(layerTracks)) layerTracks.addTo(map);
   selectedId = null;
+  showTracks = true;
+  document.getElementById('btn-tracks').classList.add('active');
+  if (!map.hasLayer(layerTracks)) layerTracks.addTo(map);
   document.querySelectorAll('.storm-item').forEach(el => el.classList.remove('selected'));
 }
-
-// ════════════════════════════════════════════════════════════════
 // ANIMATION
 // ════════════════════════════════════════════════════════════════
 function startAnimation(sid) {
@@ -717,7 +800,11 @@ function toggleLayer(type) {
   if (type === 'tracks') {
     showTracks = !showTracks;
     document.getElementById('btn-tracks').classList.toggle('active', showTracks);
-    showTracks ? layerTracks.addTo(map) : layerTracks.remove();
+    if (selectedId) {
+      layerTracks.remove();
+    } else {
+      showTracks ? layerTracks.addTo(map) : layerTracks.remove();
+    }
   } else if (type === 'heatmap') {
     showHeatmap = !showHeatmap;
     document.getElementById('btn-heatmap').classList.toggle('active', showHeatmap);
@@ -761,7 +848,7 @@ function buildChart(type) {
     const years = Object.keys(byYear).sort();
     labels = years;
     datasets = ['TD','TS','STS','TY','STY'].map((cat,i) => ({
-      label: {TD:'Áp thấp',TS:'Bão thường',STS:'Bão mạnh',TY:'Bão rất mạnh',STY:'Siêu bão'}[cat],
+      label: CAT_LABELS[cat],
       data: years.map(y => byYear[y]?.[cat] || 0),
       backgroundColor: Object.values(CAT_COLORS)[i] + 'bb',
       borderColor: Object.values(CAT_COLORS)[i],
@@ -779,7 +866,7 @@ function buildChart(type) {
   } else {
     const byCat = {TD:0,TS:0,STS:0,TY:0,STY:0};
     for (const f of storms) byCat[f.properties.max_category.code]++;
-    labels = ['Áp thấp','Bão thường','Bão mạnh','Bão rất mạnh','Siêu bão'];
+    labels = ['TD','TS','STS','TY','STY'].map(code => CAT_LABELS[code]);
     datasets = [{ label:'Số cơn bão', data: Object.values(byCat),
       backgroundColor: Object.values(CAT_COLORS).map(c=>c+'bb'),
       borderColor: Object.values(CAT_COLORS), borderWidth:1 }];
@@ -806,7 +893,7 @@ function windColor(kt) {
   if (kt < 34) return CAT_COLORS.TD;
   if (kt < 48) return CAT_COLORS.TS;
   if (kt < 64) return CAT_COLORS.STS;
-  if (kt < 84) return CAT_COLORS.TY;
+  if (kt < 99) return CAT_COLORS.TY;
   return CAT_COLORS.STY;
 }
 function centerMap() { map.flyTo([14,113], 5, {duration:1}); }
@@ -861,7 +948,7 @@ function renderSimilarPanel(data) {
   html += `<div style="background:#1e3a5f;border-radius:6px;padding:8px 10px;margin-bottom:10px">
     <div style="font-size:11px;color:#7fa8d0;margin-bottom:3px">Bão gốc đang xem</div>
     <div style="font-size:13px;font-weight:600;color:#fff">🔴 ${target.name} (${target.season})</div>
-    <div style="font-size:11px;color:#4a7299">${target.max_wind_kt} kt · ${target.max_category?.name||''}</div>
+    <div style="font-size:11px;color:#4a7299">${target.max_wind_kt} kt · ${categoryLabel(target.max_category)}</div>
   </div>`;
 
   if (!similar.length) {
@@ -880,7 +967,7 @@ function renderSimilarPanel(data) {
       </div>
       <div class="sim-bar"><div class="sim-fill" style="width:${s.similarity_pct}%;background:${col}"></div></div>
       <div class="sim-meta">
-        ${s.max_wind_kt} kt · ${s.max_category?.name||'N/A'}<br>
+        ${s.max_wind_kt} kt · ${categoryLabel(s.max_category)}<br>
         DTW: ${s.dtw_distance} · DTW score: ${s.dtw_score ?? 'N/A'} · Cosine: ${s.cosine_score ?? 'N/A'}<br>
         Δgió: ${s.wind_diff_kt ?? 'N/A'} kt · Δtháng: ${s.month_diff ?? 'N/A'} · Điểm đầu: ${s.start_distance_deg ?? 'N/A'}°
       </div>
@@ -947,9 +1034,9 @@ function renderSimilarMap(data) {
 function closeSimilar() {
   document.getElementById('similar-panel').classList.remove('visible');
   layerSimilar.clearLayers();
-  if (!map.hasLayer(layerTracks)) layerTracks.addTo(map); // khôi phục track
+  if (selectedId || !showTracks) return;
+  if (!map.hasLayer(layerTracks)) layerTracks.addTo(map);
 }
-
 function flyToSimilar(lat, lon) {
   map.flyTo([lat, lon], 6, {duration:0.8});
 }

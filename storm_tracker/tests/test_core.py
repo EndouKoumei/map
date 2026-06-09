@@ -33,7 +33,7 @@ def _feature(sid, coords, wind=50, month=9):
 
 @pytest.mark.parametrize(
     ("wind", "code"),
-    [(33, "TD"), (34, "TS"), (47, "TS"), (48, "STS"), (63, "STS"), (64, "TY"), (83, "TY"), (84, "STY")],
+    [(33, "TD"), (34, "TS"), (47, "TS"), (48, "STS"), (63, "STS"), (64, "TY"), (98, "TY"), (99, "STY")],
 )
 def test_classify_thresholds(wind, code):
     assert classify(wind)["code"] == code
