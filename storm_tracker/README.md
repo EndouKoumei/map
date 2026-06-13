@@ -1,87 +1,85 @@
-# 🌀 Storm Tracker – Module M2: Theo dõi Bão Thời Gian Thực
+# Storm Tracker VN
 
-## Cấu trúc thư mục
+WebGIS hỗ trợ tra cứu lịch sử bão, theo dõi gần thời gian thực, tìm bão tương tự và xem dashboard phân tích cho vùng biển Việt Nam.
 
-```
+## Cấu Trúc Thư Mục
+
+```text
 storm_tracker/
-├── app.py                  # Flask server chính
-├── requirements.txt        # Các thư viện cần cài
-├── data/
-│   ├── __init__.py
-│   └── fetcher.py          # Lấy dữ liệu từ JTWC qua tropycal
-└── templates/
-    └── index.html          # Giao diện bản đồ
+|-- app.py                  # Flask app, routes và API
+|-- backend/                # Logic lấy dữ liệu realtime và so sánh bão
+|-- data/                   # Dữ liệu GeoJSON dùng cho M1/M3/M4
+|-- frontend/               # Giao diện HTML/CSS/JS
+|-- scripts/                # Script xử lý/cập nhật dữ liệu lịch sử
+|-- tests/                  # Pytest
+|-- docs/                   # Tài liệu demo, kiểm thử, kết quả phân tích
+|-- requirements.txt
+`-- README.md
 ```
 
-## Cài đặt
+## Module Chính
+
+| Module | Trang | Nội dung |
+| --- | --- | --- |
+| M1 | `/` | Bản đồ lịch sử bão, lọc dữ liệu, track gradient, heatmap, animation |
+| M2 | `/realtime` | Theo dõi bão gần thời gian thực, có fallback Yagi 2024 |
+| M3 | Trong M1 | Tìm bão lịch sử tương tự bằng DTW và điểm tổng hợp |
+| M4 | `/dashboard` | Dashboard xu hướng theo thập kỷ, mùa vụ, cấp bão và vùng |
+
+## Chạy Local
 
 ```bash
-# 1. Tạo môi trường ảo (khuyến nghị)
 python -m venv venv
-source venv/bin/activate        # Linux/Mac
-venv\Scripts\activate           # Windows
-
-# 2. Cài thư viện
+venv\Scripts\activate
 pip install -r requirements.txt
-
-# 3. Chạy server
 python app.py
 ```
 
-Mở trình duyệt: **http://localhost:5000**
+Các trang chính:
 
----
+- M1: `http://localhost:5000/`
+- M2: `http://localhost:5000/realtime`
+- M4: `http://localhost:5000/dashboard`
+- API status: `http://localhost:5000/api/status`
 
-## Chạy test
+## Cập Nhật Dữ Liệu Lịch Sử
 
 ```bash
-pytest
+python scripts/m1_process_data.py
+python scripts/m1_process_data.py --force
 ```
 
-## Deploy nhanh Render/Railway
+Output mặc định: `data/storms_vn.geojson`.
 
-- Root directory: `storm_tracker`
-- Build command: `pip install -r requirements.txt`
-- Start command: `gunicorn app:app`
-- Health/smoke URL: `/api/status`
+## Kiểm Thử
 
----
+```bash
+python -m py_compile app.py backend\fetcher.py backend\similarity.py scripts\m1_process_data.py
+python -m pytest tests -q
+```
 
-## Tính năng M2
+Checklist chi tiết: [docs/TESTING.md](docs/TESTING.md).
 
-| Tính năng | Mô tả |
-|-----------|-------|
-| 🌀 Bão hiện tại | Danh sách + icon nhấp nháy trên bản đồ |
-| 🎨 Gradient cường độ | Mỗi đoạn track đổi màu theo sức gió |
-| 📡 Dự báo 5 ngày | Đường dự báo JTWC (nét đứt) |
-| 🔄 Tự động làm mới | Cập nhật mỗi 6 giờ |
-| 📊 Phân cấp Việt Nam | Theo QĐ 18/2021/QĐ-TTg |
-
-## Nguồn dữ liệu
-
-- **JTWC** (Joint Typhoon Warning Center) – dữ liệu thực tế + dự báo
-- Truy cập qua thư viện **tropycal** (Python)
-- Fallback: dữ liệu mẫu bão Yagi 2024 khi không có internet
-
-## API Endpoints
+## API Chính
 
 | Endpoint | Mô tả |
-|----------|-------|
-| `GET /api/active-storms` | GeoJSON tất cả bão đang hoạt động |
-| `GET /api/forecast/<id>` | Dự báo 5 ngày của 1 cơn bão |
-| `GET /api/storm/<id>` | Chi tiết 1 cơn bão |
-| `GET /api/status` | Trạng thái hệ thống + thời gian cập nhật |
+| --- | --- |
+| `GET /api/status` | Trạng thái hệ thống và module |
+| `GET /api/historical-storms` | GeoJSON bão lịch sử |
+| `GET /api/update-historical?force=1` | Cập nhật dữ liệu IBTrACS |
+| `GET /api/active-storms` | Bão đang hoạt động hoặc dữ liệu mẫu |
+| `GET /api/forecast/<storm_id>` | Dự báo của bão nếu có |
+| `GET /api/similar-storms/<storm_id>` | Top bão lịch sử tương tự |
+| `GET /api/dashboard-stats` | Số liệu dashboard M4 |
 
-## Tích hợp với GR2
+## Tài Liệu Hỗ Trợ Bảo Vệ
 
-Thêm link sang module lịch sử (GR2) trong `index.html`:
-```html
-<a href="/historical">📚 Xem lịch sử bão</a>
-```
+- [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md): kịch bản demo 10-15 phút.
+- [docs/REPORT_FINDINGS.md](docs/REPORT_FINDINGS.md): kết luận phân tích dữ liệu.
+- [docs/TESTING.md](docs/TESTING.md): kế hoạch kiểm thử.
 
-Và thêm route trong `app.py`:
-```python
-@app.route('/historical')
-def historical():
-    return render_template('historical.html')  # file từ GR2
-```
+## Ghi Chú
+
+- Phân cấp bão dùng nhóm: áp thấp nhiệt đới, bão thường, bão mạnh, bão rất mạnh, siêu bão.
+- M2 dùng JMA và IBTrACS NRT; nếu nguồn ngoài lỗi hoặc không có bão, hệ thống dùng dữ liệu mẫu Yagi 2024.
+- Phần deploy public và khảo sát người dùng không nằm trong phạm vi bắt buộc của đồ án cử nhân hiện tại.

@@ -1,3 +1,28 @@
-/mapplay
-/~$PGNV_DATN_Hoten_MSSV.xlsx
-/data_cache
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+pytest-cache-files-*/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Local data/cache
+data_cache/
+storm_tracker/data_cache/
+output/
+
+# Local/editor files
+.vscode/
+.idea/
+*.log
+*.tmp
+~$*
+
+# OS files
+.DS_Store
+Thumbs.db

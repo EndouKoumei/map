@@ -7,9 +7,10 @@ if str(ROOT) not in sys.path:
 
 import pytest
 
+import app as app_module
 from app import app, fetcher
-from data.fetcher import StormRealtimeFetcher, classify
-import data.similarity as similarity
+from backend.fetcher import StormRealtimeFetcher, classify
+import backend.similarity as similarity
 
 
 def _feature(sid, coords, wind=50, month=9):
@@ -73,7 +74,6 @@ def test_fetcher_falls_back_to_sample(monkeypatch):
 
     monkeypatch.setattr(f, "_fetch_jma", fail)
     monkeypatch.setattr(f, "_fetch_ibtracs_nrt", fail)
-    monkeypatch.setattr(f, "_fetch_tropycal", fail)
 
     data = f.get_active_storms(force_refresh=True)
 
@@ -85,6 +85,12 @@ def test_fetcher_falls_back_to_sample(monkeypatch):
 def test_api_smoke(monkeypatch):
     client = app.test_client()
 
+    monkeypatch.setattr(app_module, "ensure_historical_data", lambda force=False: {
+        "checked": True,
+        "updated": False,
+        "used_fallback": False,
+        "message": "test",
+    })
     monkeypatch.setattr(fetcher, "get_active_storms", lambda force_refresh=False: {
         "type": "FeatureCollection",
         "source": "test",
@@ -95,8 +101,18 @@ def test_api_smoke(monkeypatch):
         "no_forecast": True,
         "cone_points": [],
     })
+    monkeypatch.setattr(app_module, "build_dashboard_stats", lambda: {
+        "summary": {"total_storms": 0},
+        "by_decade": [],
+        "by_month": [],
+        "by_category": [],
+        "by_region": [],
+        "era_comparison": [],
+        "top_strongest": [],
+    })
 
     assert client.get("/api/status").status_code == 200
+    assert client.get("/dashboard").status_code == 200
     assert client.get("/api/historical-storms").status_code == 200
     active = client.get("/api/active-storms")
     assert active.status_code == 200
@@ -104,3 +120,33 @@ def test_api_smoke(monkeypatch):
     forecast = client.get("/api/forecast/sample")
     assert forecast.status_code == 200
     assert "cone_points" in forecast.get_json()
+    dashboard = client.get("/api/dashboard-stats")
+    assert dashboard.status_code == 200
+    assert "summary" in dashboard.get_json()
+
+
+def test_update_historical_endpoint(monkeypatch):
+    client = app.test_client()
+    fake_geojson = ROOT / "tests" / "_tmp_storms_vn.geojson"
+    fake_csv = ROOT / "tests" / "_tmp_ibtracs.csv"
+    fake_geojson.write_text('{"type":"FeatureCollection","features":[]}', encoding="utf-8")
+
+    try:
+        monkeypatch.setattr(app_module, "HISTORICAL_PATH", str(fake_geojson))
+        monkeypatch.setattr(app_module.m1_process_data, "CACHE_FILE", str(fake_csv))
+        monkeypatch.setattr(app_module, "ensure_historical_data", lambda force=False: {
+            "checked": True,
+            "updated": force,
+            "used_fallback": False,
+            "message": "mock update",
+        })
+
+        res = client.get("/api/update-historical?force=1")
+        assert res.status_code == 200
+        data = res.get_json()
+        assert data["checked"] is True
+        assert data["updated"] is True
+        assert data["force"] is True
+    finally:
+        fake_geojson.unlink(missing_ok=True)
+        fake_csv.unlink(missing_ok=True)
