@@ -223,7 +223,7 @@
 
     <div id="status-bar">
       <div id="status-dot" class="loading"></div>
-      <span id="status-text">?ang k?t n?i d? li?u realtime...</span>
+      <span id="status-text">Đang kết nối dữ liệu realtime...</span>
     </div>
 
     <div class="tabs">
@@ -258,7 +258,7 @@
         </div>
         <div class="legend-item">
           <div class="legend-color legend-line-dashed" style="width:28px"></div>
-          <div class="legend-text">???ng d? b?o n?u ngu?n realtime cung c?p</div>
+          <div class="legend-text">Đường đi bão nếu nguồn realtime cung cấp</div>
         </div>
       </div>
 
@@ -266,9 +266,9 @@
         <div class="legend-title">Nguồn dữ liệu</div>
         <div style="font-size:11px;color:#7fa8d0;line-height:1.7">
           <b>JMA</b> - Japan Meteorological Agency<br>
-          <b>IBTrACS NRT/NOAA</b> - d? li?u g?n th?i gian th?c<br>
-          C?p nh?t m?i <b>6 gi?</b> t? ??ng<br>
-          V?ng quan s?t: <b>0?-30?N, 95?-135?E</b>
+          <b>IBTrACS NRT/NOAA</b> - dữ liệu gần thời gian thực<br>
+          Cập nhật mỗi <b>6 giờ</b> tự động<br>
+          Vùng quan sát: <b>0°-30°N, 95°-135°E</b>
         </div>
       </div>
     </div>
@@ -292,9 +292,8 @@
 </div>
 
 <script>
-// 
-//  CONFIG
-// 
+
+//  CONFIG 
 const API_BASE     = window.location.origin;
 const REFRESH_MS   = 6 * 60 * 60 * 1000; // 6 giờ
 const VIETNAM_BBOX = [[5, 95], [30, 135]]; // vùng quan sát
@@ -331,10 +330,8 @@ function fmtCoord(lat, lon) {
 function safeCategory(cat) {
   return cat || { code: 'N/A', name: 'Chưa xác định', css: '', color: '#fff' };
 }
-
-// 
+ 
 //  BẢN ĐỒ
-// 
 const map = L.map('map', { zoomControl: false }).setView([15, 115], 5);
 
 // Basemap tối
@@ -350,17 +347,13 @@ L.control.zoom({ position: 'topright' }).addTo(map);
 L.rectangle([[8.5, 102.1], [23.4, 109.5]], {
   color: '#60a5fa', weight: 1, fill: false, dashArray: '4 4', opacity: 0.4
 }).addTo(map).bindTooltip('Vùng biển Việt Nam', { permanent: false });
-
-// 
-//  LAYER GROUPS
-// 
+ 
+//  LAYER GROUPS 
 const layerTrack    = L.layerGroup().addTo(map);
 const layerForecast = L.layerGroup().addTo(map);
 const layerMarkers  = L.layerGroup().addTo(map);
-
-// 
+ 
 //  TABS
-// 
 document.querySelectorAll('.tab').forEach(t => {
   t.addEventListener('click', () => {
     document.querySelectorAll('.tab, .pane').forEach(el => el.classList.remove('active'));
@@ -369,9 +362,7 @@ document.querySelectorAll('.tab').forEach(t => {
   });
 });
 
-// 
-//  LOAD BÃO HIỆN TẠI
-// 
+//  LOAD BÃO HIỆN TẠI 
 let currentStorms = [];
 let selectedStormId = null;
 
@@ -395,7 +386,7 @@ async function loadStorms(forceRefresh = false) {
     // Nếu là sample data, cảnh báo
     const hasSample = currentStorms.some(f => f.properties.is_sample);
     if (hasSample) {
-      setStatus('warning', '?ang d?ng d? li?u m?u do ngu?n realtime ch?a c? d? li?u.');
+      setStatus('warning', 'Đang dùng dữ liệu mẫu do nguồn realtime chưa có dữ liệu.');
     }
   } catch (err) {
     setStatus('error', `Lỗi kết nối API: ${err.message || 'kiểm tra server Flask'}`);
@@ -407,9 +398,7 @@ async function loadStorms(forceRefresh = false) {
   }
 }
 
-// 
 //  RENDER: DANH SÁCH BÃO (SIDEBAR)
-// 
 function renderStormList(data) {
   const list = document.getElementById('storm-list');
   const storms = data.features || [];
@@ -420,7 +409,7 @@ function renderStormList(data) {
   if (storms.some(f => f.properties.is_sample)) {
     html += `<div class="sample-warning">
        <b>Chế độ dữ liệu mẫu</b><br>
-      Hi?n th? b?o Yagi 2024 l?m v? d? minh ho? khi ngu?n realtime kh?ng c? d? li?u.
+      Hiển thị bão Yagi 2024 làm ví dụ minh hoạ khi nguồn realtime không có dữ liệu.
 
     </div>`;
   }
@@ -471,9 +460,7 @@ function renderStormList(data) {
   list.innerHTML = html;
 }
 
-// 
 //  RENDER: BÃO TRÊN BẢN ĐỒ (gradient theo cường độ)
-// 
 function renderStormMap(data) {
   layerTrack.clearLayers();
   layerMarkers.clearLayers();
@@ -535,9 +522,7 @@ function addStormIcon(latlng, props, cat) {
     .on('click', () => selectStorm(props.id));
 }
 
-// 
 //  LOAD & RENDER DỰ BÁO
-// 
 async function loadForecast(stormId) {
   layerForecast.clearLayers();
   try {
@@ -602,9 +587,7 @@ function renderForecast(data) {
   }
 }
 
-// 
 //  INFO PANEL
-// 
 function showInfoPanel(stormId, forecastData) {
   const storm = currentStorms.find(f => f.properties.id === stormId);
   if (!storm) return;
@@ -645,9 +628,7 @@ function closeInfoPanel() {
   layerForecast.clearLayers();
 }
 
-// 
 //  HELPERS
-// 
 function selectStorm(stormId) {
   document.querySelectorAll('.storm-card').forEach(c => c.classList.remove('selected'));
   const card = document.querySelector(`.storm-card[data-id="${stormId}"]`);
@@ -710,9 +691,7 @@ function updateBadge(ts) {
   badge.textContent = `Cập nhật: ${d.toLocaleTimeString('vi-VN')} ${d.toLocaleDateString('vi-VN')}`;
 }
 
-// 
 //  KHỞI ĐỘNG
-// 
 loadStorms();
 setInterval(loadStorms, REFRESH_MS); // auto-refresh 6h
 </script>
