@@ -1,1 +1,1 @@
-web: gunicorn app:app
+web: python scripts/m1_process_data.py && gunicorn app:app --timeout 30
