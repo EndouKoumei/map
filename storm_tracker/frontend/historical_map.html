@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title> Lịch sử Bão Việt Nam – M1</title>
+  <title>Lịch sử Bão Việt Nam</title>
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -11,27 +11,11 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/shared.css') }}"/>
 
   <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Inter', sans-serif; background: #0f1923; color: #e2e8f0; height: 100vh; overflow: hidden; }
-
-  #nav {
-    display: flex; align-items: center; gap: 0;
-    height: 40px; background: #0d1e30;
-    border-bottom: 1px solid #1a3a5c; flex-shrink: 0;
-    padding: 0 16px;
-  }
-  .nav-brand { font-size: 13px; font-weight: 700; color: #60a5fa; margin-right: 20px; white-space: nowrap; }
-  .nav-link {
-    display: flex; align-items: center; gap: 6px;
-    height: 40px; padding: 0 14px; font-size: 12px; font-weight: 600;
-    color: #7fa8d0; text-decoration: none; border-bottom: 2px solid transparent;
-    transition: all .15s; white-space: nowrap;
-  }
-  .nav-link:hover { color: #e2e8f0; background: rgba(255,255,255,.04); }
-  .nav-link.active { color: #60a5fa; border-bottom-color: #60a5fa; }
-  .nav-right { margin-left: auto; font-size: 11px; color: #2d4a6e; }
 
   #app      { display: flex; flex-direction: column; height: 100vh; }
   #topbar   { display: flex; align-items: center; gap: 12px; padding: 0 16px; height: 52px; background: #1a2535; border-bottom: 1px solid #2d4a6e; flex-shrink: 0; }
@@ -213,13 +197,7 @@
 <body>
 <div id="app">
 
-  <nav id="nav">
-    <span class="nav-brand">🌀 Storm Tracker VN</span>
-    <a href="/" class="nav-link active">📚 Lịch sử bão</a>
-    <a href="/realtime" class="nav-link">📡 Thời gian thực</a>
-    <a href="/dashboard" class="nav-link">📊 Dashboard</a>
-    <span class="nav-right">ĐATN 2025.2 · Đặng Hồng Minh · 20225740</span>
-  </nav>
+  {% include "partials/navbar.html" %}
 
   <header id="topbar">
     <span class="topbar-title"> Lịch sử Bão Việt Nam</span>
@@ -317,7 +295,7 @@
         <div id="detail-content"></div>
       </div>
 
-      <!-- M3 Similar storms panel -->
+      <!-- Similar storms panel -->
       <div id="similar-panel">
         <button type="button" class="sp-close" onclick="closeSimilar()" aria-label="Đóng bão tương tự">&times;</button>
         <div class="sp-title"> Bão lịch sử tương tự (DTW)</div>
@@ -388,7 +366,7 @@ L.rectangle([[8.5, 102.1],[23.4,109.5]], {
 const layerTracks  = L.layerGroup().addTo(map);
 let   layerHeatmap = null;
 let   layerAnim    = L.layerGroup().addTo(map);
-const layerSimilar = L.layerGroup().addTo(map);  // M3
+const layerSimilar = L.layerGroup().addTo(map);
 const layerSelected = L.layerGroup().addTo(map); // bão đang chọn - luôn trên cùng
 let   showHeatmap  = false;
 let   showTracks   = true;
@@ -721,7 +699,7 @@ function showDetail(f) {
       </button>
       <button onclick="findSimilarStorms('${p.sid}')"
         style="width:100%;margin-top:6px;padding:7px;border-radius:7px;border:none;background:#0f766e;color:#fff;font-size:12px;font-weight:600;cursor:pointer">
-         Tìm bão lịch sử tương tự (M3)
+         Tìm bão lịch sử tương tự
       </button>
 
     </div>`;
@@ -900,7 +878,7 @@ function updateBadge(n) {
   document.getElementById('loaded-info').textContent = ` ${n.toLocaleString()} bão · IBTrACS NOAA`;
 }
 
-// M3 – TÌM BÃO TƯƠNG TỰ (DTW)
+// Find similar historical storms with DTW.
 
 // Màu cho từng rank bão tương tự (rank 1 = đậm nhất)
 const SIMILAR_COLORS = ['#2dd4bf','#22b8a8','#189a8e','#0f7a71','#0a5c56'];
@@ -976,7 +954,7 @@ function renderSimilarPanel(data) {
 function renderSimilarMap(data) {
   layerSimilar.clearLayers();
   layerSelected.clearLayers();  // ẩn highlight cũ
-  layerTracks.remove();         // ẩn toàn bộ track khác → chỉ còn M3
+  layerTracks.remove();
 
   // Vẽ lại bão gốc màu đỏ đậm
   if (data.target?.coords?.length >= 2) {

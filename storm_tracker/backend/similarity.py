@@ -32,7 +32,7 @@ def _load():
     if _cache_loaded:
         return _storms_cache
     if not os.path.exists(GEOJSON_PATH):
-        raise FileNotFoundError("Chua co du lieu lich su. Chay: python scripts/m1_process_data.py")
+        raise FileNotFoundError("Chua co du lieu lich su. Chay: python scripts/process_historical_data.py")
     with open(GEOJSON_PATH, "r", encoding="utf-8") as f:
         _storms_cache = json.load(f)["features"]
     _cache_loaded = True

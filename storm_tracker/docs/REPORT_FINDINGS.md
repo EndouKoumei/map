@@ -1,4 +1,4 @@
-# Ket Luan Phan Tich Du Lieu Bao
+﻿# Ket Luan Phan Tich Du Lieu Bao
 
 Tai lieu nay tom tat cac ket qua co the dua vao chuong ket qua thuc nghiem cua bao cao. So lieu lay tu `data/storms_vn.geojson` thong qua API `/api/dashboard-stats`.
 
@@ -107,6 +107,6 @@ Khi so sanh truoc va sau nam 2000, tap du lieu ghi nhan ty le sieu bao cao hon t
 ## 9. Gioi Han Va Huong Phat Trien
 
 - Phan vung Bac/Trung/Nam hien la xap xi theo toa do, chua co tinh toan do bo theo tinh.
-- M2 phu thuoc nguon du lieu ngoai; fallback Yagi 2024 giup demo on dinh nhung khong thay the du lieu realtime khi co bao that.
+- theo dõi thời gian thực phu thuoc nguon du lieu ngoai; fallback Yagi 2024 giup demo on dinh nhung khong thay the du lieu realtime khi co bao that.
 - Heatmap the hien mat do diem/track theo khong gian, khong phai xac suat thiet hai.
 - Huong phat trien: bo sung dia gioi tinh ven bien, tinh landfall, canh bao vung anh huong Viet Nam va cone du bao bat dinh.

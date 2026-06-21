@@ -15,30 +15,12 @@
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/shared.css') }}" />
 
   <style>
     /*  RESET & BASE  */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Inter', sans-serif; background: #0f1923; color: #e2e8f0; height: 100vh; overflow: hidden; }
-
-    /*  NAV BAR  */
-    #nav {
-      position: fixed; top: 0; left: 0; right: 0; z-index: 9000;
-      display: flex; align-items: center;
-      height: 40px; background: #0d1e30;
-      border-bottom: 1px solid #1a3a5c;
-      padding: 0 16px;
-    }
-    .nav-brand { font-size: 13px; font-weight: 700; color: #60a5fa; margin-right: 20px; white-space: nowrap; }
-    .nav-link {
-      display: flex; align-items: center; gap: 6px;
-      height: 40px; padding: 0 14px; font-size: 12px; font-weight: 600;
-      color: #7fa8d0; text-decoration: none; border-bottom: 2px solid transparent;
-      transition: all .15s; white-space: nowrap;
-    }
-    .nav-link:hover { color: #e2e8f0; background: rgba(255,255,255,.04); }
-    .nav-link.active { color: #60a5fa; border-bottom-color: #60a5fa; }
-    .nav-right { margin-left: auto; font-size: 11px; color: #2d4a6e; }
 
     /*  LAYOUT  */
     #app        { display: flex; height: 100vh; padding-top: 40px; }
@@ -205,20 +187,14 @@
   </style>
 </head>
 <body>
-<nav id="nav">
-  <span class="nav-brand">🌀 Storm Tracker VN</span>
-  <a href="/" class="nav-link">📚 Lịch sử bão</a>
-  <a href="/realtime" class="nav-link active">📡 Thời gian thực</a>
-  <a href="/dashboard" class="nav-link">📊 Dashboard</a>
-  <span class="nav-right">ĐATN 2025.2 · Đặng Hồng Minh · 20225740</span>
-</nav>
+{% include "partials/navbar.html" %}
 <div id="app">
 
   <!--  SIDEBAR  -->
   <aside id="sidebar">
     <div class="sidebar-header">
       <h1> Hệ thống Theo dõi Bão</h1>
-      <div class="sub">Tây Bắc Thái Bình Dương · Module M2</div>
+      <div class="sub">Tây Bắc Thái Bình Dương</div>
     </div>
 
     <div id="status-bar">
@@ -316,6 +292,14 @@ function categoryLabel(cat) {
 function safeNum(v, fallback = 0) {
   const n = Number(v);
   return Number.isFinite(n) ? n : fallback;
+}
+
+function hasMetric(v) {
+  return v !== null && v !== undefined && String(v).trim() !== '' && Number.isFinite(Number(v));
+}
+
+function metricText(v, suffix = '') {
+  return hasMetric(v) ? `${Number(v)}${suffix ? ` ${suffix}` : ''}` : 'N/A';
 }
 
 function fmtNum(v, digits = 1, fallback = 'N/A') {
@@ -433,7 +417,7 @@ function renderStormList(data) {
         <div class="card-stats">
           <div class="stat-item">
             <div class="stat-label"> Gió tối đa</div>
-            <div class="stat-val">${p.wind_kt} kt</div>
+            <div class="stat-val">${metricText(p.wind_kt, 'kt')}</div>
           </div>
           <div class="stat-item">
             <div class="stat-label"> Vị trí hiện tại</div>
@@ -441,7 +425,7 @@ function renderStormList(data) {
           </div>
           <div class="stat-item">
             <div class="stat-label"> Áp suất</div>
-            <div class="stat-val">${p.pressure_mb || 'N/A'} hPa</div>
+            <div class="stat-val">${metricText(p.pressure_mb, 'hPa')}</div>
           </div>
           <div class="stat-item">
             <div class="stat-label"> Hướng di chuyển</div>
@@ -470,12 +454,13 @@ function renderStormMap(data) {
     const coords = f.geometry?.coordinates || []; // [[lon, lat], ...]
     if (!coords.length) continue;
     const latlngs = coords.map(c => [c[1], c[0]]);
-    const intensities = p.track_intensity || Array(coords.length).fill(p.wind_kt);
+    const cat = safeCategory(p.category);
+    const intensities = p.track_intensity || [];
 
     //  Gradient track: vẽ từng đoạn với màu riêng 
     for (let i = 0; i < latlngs.length - 1; i++) {
-      const w   = intensities[i] || p.wind_kt;
-      const col = windToColor(w);
+      const w   = intensities[i];
+      const col = metricColor(w, cat);
       L.polyline([latlngs[i], latlngs[i+1]], {
         color: col, weight: 3.5, opacity: 0.85,
       }).addTo(layerTrack);
@@ -483,16 +468,15 @@ function renderStormMap(data) {
 
     //  Các điểm quan trắc nhỏ 
     for (let i = 0; i < latlngs.length - 1; i++) {
-      const w = intensities[i] || p.wind_kt;
+      const w = intensities[i];
       L.circleMarker(latlngs[i], {
-        radius: 3, color: windToColor(w), fillColor: windToColor(w),
+        radius: 3, color: metricColor(w, cat), fillColor: metricColor(w, cat),
         fillOpacity: 1, weight: 0,
       }).addTo(layerTrack).bindPopup(makeObsPopup(p, w, i));
     }
 
     //  Icon bão tại vị trí hiện tại (nhấp nháy) 
     const cur = latlngs[latlngs.length - 1];
-    const cat = safeCategory(p.category);
     addStormIcon(cur, p, cat);
   }
 }
@@ -572,15 +556,15 @@ function renderForecast(data) {
   // Điểm dự báo theo giờ
   for (const pt of pts) {
     if (!Number.isFinite(Number(pt.lat)) || !Number.isFinite(Number(pt.lon))) continue;
-    const col = windToColor(pt.wind_kt);
     const cat = safeCategory(pt.category);
+    const col = metricColor(pt.wind_kt, cat);
     L.circleMarker([pt.lat, pt.lon], {
       radius: 5, color: '#fff', weight: 1.5,
       fillColor: col, fillOpacity: 0.9,
     }).addTo(layerForecast)
       .bindPopup(`
         <b>+${pt.hour}h dự báo</b><br>
-         Gió: <b>${pt.wind_kt} kt</b><br>
+         Gió: <b>${metricText(pt.wind_kt, 'kt')}</b><br>
          Cấp: <b>${categoryLabel(cat)}</b><br>
          ${fmtCoord(pt.lat, pt.lon)}
       `);
@@ -598,8 +582,8 @@ function showInfoPanel(stormId, forecastData) {
   let html = `
     <div class="info-title"> ${p.name}</div>
     <div class="info-row"><span class="info-key">Phân cấp</span><span class="info-val" style="color:${categoryColor(cat)}">${categoryLabel(cat)}</span></div>
-    <div class="info-row"><span class="info-key">Gió tối đa</span><span class="info-val">${safeNum(p.wind_kt)} kt (${Math.round(safeNum(p.wind_kt) * 1.852)} km/h)</span></div>
-    <div class="info-row"><span class="info-key">Áp suất</span><span class="info-val">${p.pressure_mb || 'N/A'} hPa</span></div>
+    <div class="info-row"><span class="info-key">Gió tối đa</span><span class="info-val">${hasMetric(p.wind_kt) ? `${metricText(p.wind_kt, 'kt')} (${Math.round(Number(p.wind_kt) * 1.852)} km/h)` : 'N/A'}</span></div>
+    <div class="info-row"><span class="info-key">Áp suất</span><span class="info-val">${metricText(p.pressure_mb, 'hPa')}</span></div>
     <div class="info-row"><span class="info-key">Vị trí</span><span class="info-val">${fmtCoord(p.lat, p.lon)}</span></div>
     <div class="info-row"><span class="info-key">Di chuyển</span><span class="info-val">${p.movement_dir || 'N/A'} · ${safeNum(p.movement_speed_kt)} kt</span></div>
     <div class="info-row"><span class="info-key">Cập nhật</span><span class="info-val">${p.timestamp || 'N/A'}</span></div>`;
@@ -609,11 +593,11 @@ function showInfoPanel(stormId, forecastData) {
       <div class="forecast-title"> Dự báo đường đi</div>
       <div class="forecast-pts">`;
     for (const pt of pts) {
-      const col = windToColor(pt.wind_kt);
+      const col = metricColor(pt.wind_kt, safeCategory(pt.category));
       html += `<div class="fcst-row">
         <div class="fcst-dot" style="background:${col}"></div>
         <div class="fcst-hr">+${pt.hour}h</div>
-        <div class="fcst-info">${safeNum(pt.wind_kt)}kt · ${fmtCoord(pt.lat, pt.lon)}</div>
+        <div class="fcst-info">${metricText(pt.wind_kt, 'kt')} · ${fmtCoord(pt.lat, pt.lon)}</div>
       </div>`;
     }
     html += `</div></div>`;
@@ -657,13 +641,17 @@ function windToColor(kt) {
   return CAT_COLORS.sty;
 }
 
+function metricColor(windKt, category) {
+  return hasMetric(windKt) ? windToColor(Number(windKt)) : categoryColor(category, '#60a5fa');
+}
+
 function makeCurrentPopup(p) {
   const cat = safeCategory(p.category);
   return `<div style="min-width:180px">
     <b style="font-size:14px"> ${p.name}</b><br>
     <span style="color:${categoryColor(cat)}">${categoryLabel(cat)}</span><br>
-     Gió: <b>${safeNum(p.wind_kt)} kt</b><br>
-     Áp: <b>${p.pressure_mb || 'N/A'} hPa</b><br>
+     Gió: <b>${metricText(p.wind_kt, 'kt')}</b><br>
+     Áp: <b>${metricText(p.pressure_mb, 'hPa')}</b><br>
      ${fmtCoord(p.lat, p.lon)}<br>
     <small style="color:#888">${p.timestamp || 'N/A'}</small><br>
     <button onclick="loadForecast('${p.id}')"

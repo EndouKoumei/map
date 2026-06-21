@@ -101,7 +101,8 @@ class StormRealtimeFetcher:
     JMA_TIMEOUT_SEC = 5
     IBTRACS_TIMEOUT_SEC = 12
 
-    JMA_URL = "https://www.jma.go.jp/bosai/typhoon/data/TCINFO.json"
+    JMA_BASE_URL = "https://www.jma.go.jp/bosai/typhoon/data"
+    JMA_TARGET_URL = f"{JMA_BASE_URL}/targetTc.json"
     IBTRACS_NRT_URL = (
         "https://www.ncei.noaa.gov/data/international-best-track-archive-"
         "for-climate-stewardship-ibtracs/v04r01/access/csv/"
@@ -193,115 +194,145 @@ class StormRealtimeFetcher:
                 return feature["properties"]
         return {"error": f"Không tìm thấy bão {storm_id}"}
 
+    def _jma_category(self, code):
+        labels = {
+            "TD": "Áp thấp nhiệt đới (JMA)",
+            "TS": "Bão nhiệt đới (JMA)",
+            "STS": "Bão rất mạnh (JMA)",
+            "TY": "Typhoon (JMA)",
+        }
+        return {
+            "code": "JMA",
+            "name": labels.get(code, f"Phân cấp JMA: {code or 'N/A'}"),
+            "css": "jma",
+            "color": "#60a5fa",
+        }
+
+    def _jma_forecast_url(self, storm_id):
+        return f"{self.JMA_BASE_URL}/{storm_id}/forecast.json"
+
+    def _request_jma_forecast(self, storm_id):
+        headers = {"User-Agent": "Mozilla/5.0 (Storm Tracker VN/2.3)"}
+        resp = requests.get(
+            self._jma_forecast_url(storm_id),
+            headers=headers,
+            timeout=self.JMA_TIMEOUT_SEC,
+        )
+        resp.raise_for_status()
+        return resp.json()
+
+    def _parse_jma_forecast(self, storm_id, payload, category_code=None):
+        title = next((item for item in payload if item.get("part") == "title"), {})
+        analysis = next((item for item in payload if item.get("advancedHours") == 0), {})
+        category = self._jma_category(category_code)
+        cone_points = []
+
+        for item in payload:
+            if "advancedHours" not in item or not item.get("center"):
+                continue
+            lat, lon = item["center"]
+            cone_points.append({
+                "hour": int(item["advancedHours"]),
+                "lat": safe_float(lat),
+                "lon": safe_float(lon),
+                "wind_kt": None,
+                "pressure_mb": None,
+                "category": category,
+                "label": (item.get("part") or {}).get("en", f"+{item['advancedHours']}h"),
+                "valid_time": (item.get("validtime") or {}).get("UTC"),
+            })
+
+        cone_points.sort(key=lambda point: point["hour"])
+        coords = [[point["lon"], point["lat"]] for point in cone_points]
+        name = ((title.get("name") or {}).get("en") or storm_id).strip()
+        issue = (title.get("issue") or {}).get("UTC")
+
+        return {
+            "storm_id": storm_id,
+            "storm_name": name,
+            "source": "JMA Typhoon Map",
+            "issued_at": issue,
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "data_note": "JMA forecast JSON does not provide wind or pressure in this adapter.",
+            "cone_points": cone_points,
+            "forecast_geojson": {
+                "type": "Feature",
+                "geometry": {"type": "LineString", "coordinates": coords},
+            },
+            "_analysis": analysis,
+        }
+
+    def _jma_track_coordinates(self, analysis):
+        track = (analysis or {}).get("track") or {}
+        points = list(track.get("preTyphoon") or []) + list(track.get("typhoon") or [])
+        coords = []
+        for lat, lon in points:
+            coord = [safe_float(lon), safe_float(lat)]
+            if not coords or coords[-1] != coord:
+                coords.append(coord)
+        return coords
+
     def _fetch_jma(self) -> dict:
-        headers = {"User-Agent": "Mozilla/5.0 (Storm Tracker DATN/2.0; VN)"}
-        resp = requests.get(self.JMA_URL, headers=headers, timeout=self.JMA_TIMEOUT_SEC)
+        headers = {"User-Agent": "Mozilla/5.0 (Storm Tracker VN/2.3)"}
+        resp = requests.get(self.JMA_TARGET_URL, headers=headers, timeout=self.JMA_TIMEOUT_SEC)
         resp.raise_for_status()
 
         features = []
-        for tc in resp.json():
+        for target in resp.json():
+            storm_id = target.get("tropicalCyclone")
+            if not storm_id:
+                continue
             try:
-                pref_list = sorted(tc.get("pref", []), key=lambda x: x.get("time", ""))
-                if not pref_list:
+                forecast = self._parse_jma_forecast(
+                    storm_id,
+                    self._request_jma_forecast(storm_id),
+                    target.get("category"),
+                )
+                analysis = forecast.pop("_analysis", {})
+                current = next((point for point in forecast["cone_points"] if point["hour"] == 0), None)
+                if not current:
                     continue
-                latest = pref_list[-1]
-                lat = safe_float(latest.get("lat"))
-                lon = safe_float(latest.get("lon"))
-                if not lat or not lon or not (0 <= lat <= 40 and 95 <= lon <= 160):
+                lat = current["lat"]
+                lon = current["lon"]
+                if not (0 <= lat <= 40 and 95 <= lon <= 160):
                     continue
-
-                wind_kt = safe_float(latest.get("wind")) * 0.539957
-                coords = [
-                    [safe_float(p.get("lon")), safe_float(p.get("lat"))]
-                    for p in pref_list if p.get("lon") and p.get("lat")
-                ]
-                intensities = [safe_float(p.get("wind", 0)) * 0.539957 for p in pref_list]
+                coords = self._jma_track_coordinates(analysis) or [[lon, lat]]
+                self._forecast_cache[storm_id] = {**forecast, "_time": time.time()}
                 features.append({
                     "type": "Feature",
                     "properties": {
-                        "id": tc.get("id", ""),
-                        "name": tc.get("name", tc.get("id", "")),
+                        "id": storm_id,
+                        "name": forecast["storm_name"],
                         "basin": "WP",
-                        "wind_kt": round(wind_kt),
-                        "pressure_mb": safe_float(latest.get("pres"), 1000),
-                        "category": classify(wind_kt),
+                        "wind_kt": None,
+                        "pressure_mb": None,
+                        "category": current["category"],
                         "lat": lat,
                         "lon": lon,
                         "movement_dir": "N/A",
-                        "movement_speed_kt": 0,
-                        "timestamp": latest.get("time", ""),
+                        "movement_speed_kt": None,
+                        "timestamp": current.get("valid_time") or forecast.get("issued_at"),
                         "is_sample": False,
-                        "source": "JMA",
-                        "track_intensity": [round(w) for w in intensities],
+                        "source": "JMA Typhoon Map",
+                        "data_note": forecast["data_note"],
+                        "track_intensity": [],
                     },
-                    "geometry": {"type": "LineString", "coordinates": coords or [[lon, lat]]},
+                    "geometry": {"type": "LineString", "coordinates": coords},
                 })
-            except Exception:
-                continue
+            except Exception as exc:
+                print(f"JMA storm {storm_id} error: {exc}")
 
         return {
             "type": "FeatureCollection",
             "generated_at": datetime.now(timezone.utc).isoformat(),
-            "source": "JMA (Japan Meteorological Agency)",
-            "source_url": self.JMA_URL,
+            "source": "JMA Typhoon Map",
+            "source_url": self.JMA_TARGET_URL,
             "features": features,
         }
 
     def _fetch_jma_forecast(self, storm_id: str) -> dict:
-        headers = {"User-Agent": "Mozilla/5.0 (Storm Tracker DATN/2.0; VN)"}
-        resp = requests.get(self.JMA_URL, headers=headers, timeout=self.JMA_TIMEOUT_SEC)
-        resp.raise_for_status()
-
-        for tc in resp.json():
-            if tc.get("id") != storm_id:
-                continue
-            forecast_list = sorted(tc.get("forecast", []), key=lambda x: x.get("time", ""))
-            if not forecast_list:
-                return {}
-
-            pref = sorted(tc.get("pref", []), key=lambda x: x.get("time", ""))
-            t0 = pref[-1] if pref else {}
-            cone_points = []
-            coords = []
-
-            if t0:
-                wind = safe_float(t0.get("wind", 0)) * 0.539957
-                cone_points.append({
-                    "hour": 0,
-                    "lat": safe_float(t0.get("lat")),
-                    "lon": safe_float(t0.get("lon")),
-                    "wind_kt": round(wind),
-                    "pressure_mb": safe_float(t0.get("pres"), 1000),
-                    "category": classify(wind),
-                })
-                coords.append([safe_float(t0.get("lon")), safe_float(t0.get("lat"))])
-
-            for i, pt in enumerate(forecast_list):
-                lat = safe_float(pt.get("lat"))
-                lon = safe_float(pt.get("lon"))
-                wind = safe_float(pt.get("wind", 0)) * 0.539957
-                cone_points.append({
-                    "hour": (i + 1) * 24,
-                    "lat": lat,
-                    "lon": lon,
-                    "wind_kt": round(wind),
-                    "pressure_mb": safe_float(pt.get("pres", 1000)),
-                    "category": classify(wind),
-                })
-                coords.append([lon, lat])
-
-            return {
-                "storm_id": storm_id,
-                "storm_name": tc.get("name", storm_id),
-                "source": "JMA",
-                "generated_at": datetime.now(timezone.utc).isoformat(),
-                "cone_points": cone_points,
-                "forecast_geojson": {
-                    "type": "Feature",
-                    "geometry": {"type": "LineString", "coordinates": coords},
-                },
-            }
-        return {}
+        payload = self._request_jma_forecast(storm_id)
+        return self._parse_jma_forecast(storm_id, payload)
 
     def _fetch_ibtracs_nrt(self) -> dict:
         cutoff = datetime.now(timezone.utc) - timedelta(days=self.RECENT_DAYS)

@@ -1,5 +1,5 @@
 """
-M1 Data Processor – IBTrACS → GeoJSON nâng cao
+Historical Data Processor – IBTrACS → GeoJSON nâng cao
 Tích hợp cơ chế tự động tải dữ liệu từ NOAA (kế thừa từ GR2 - StormDataProcessor).
 
 Quy trình:
@@ -8,9 +8,9 @@ Quy trình:
   3. Xử lý CSV → GeoJSON nâng cao (cường độ từng điểm, phục vụ gradient màu)
 
 Sử dụng:
-    python m1_process_data.py              # tự tải từ NOAA nếu cần
-    python m1_process_data.py --force      # bắt buộc tải lại dù cache còn mới
-    python m1_process_data.py --input path/to/ibtracs.WP.list.v04r01.csv  # dùng file sẵn có
+    python process_historical_data.py              # tự tải từ NOAA nếu cần
+    python process_historical_data.py --force      # bắt buộc tải lại dù cache còn mới
+    python process_historical_data.py --input path/to/ibtracs.WP.list.v04r01.csv  # dùng file sẵn có
 """
 import pandas as pd
 import json, argparse, os, sys, time, requests
@@ -266,7 +266,7 @@ def process(input_csv: str, output_json: str):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
-        description='M1 Data Processor – Tự tải IBTrACS từ NOAA và tạo GeoJSON nâng cao')
+        description='Historical Data Processor – Tự tải IBTrACS từ NOAA và tạo GeoJSON nâng cao')
     parser.add_argument('--input',  default=None,
                         help='(Tuỳ chọn) Dùng file CSV sẵn có thay vì tải từ NOAA')
     parser.add_argument('--output', default=DEFAULT_OUTPUT,

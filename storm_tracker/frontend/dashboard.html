@@ -3,26 +3,16 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>M4 Dashboard - Storm Tracker VN</title>
+  <title>Dashboard - Storm Tracker VN</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/shared.css') }}"/>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: "Inter", "Segoe UI", Arial, sans-serif;
       background: #0b1828; color: #e2e8f0; height: 100vh; overflow: hidden;
     }
-    #nav {
-      height: 40px; background: #0b1d30; border-bottom: 1px solid #1e3a5f;
-      display: flex; align-items: center; gap: 14px; padding: 0 16px;
-    }
-    .nav-brand { font-weight: 700; color: #60a5fa; }
-    .nav-link {
-      color: #7fa8d0; text-decoration: none; font-size: 14px; font-weight: 600;
-      padding: 12px 10px 10px; border-bottom: 2px solid transparent;
-    }
-    .nav-link.active { color: #60a5fa; border-bottom-color: #60a5fa; }
-    .nav-right { margin-left: auto; font-size: 11px; color: #2d4a6e; }
     main { height: calc(100vh - 40px); overflow-y: auto; }
     .hero {
       padding: 20px 24px 14px; border-bottom: 1px solid #1e3a5f;
@@ -57,22 +47,15 @@
       body { overflow: auto; }
       main { height: auto; }
       .kpis, .grid, .charts { grid-template-columns: 1fr; }
-      .nav-right { display: none; }
     }
   </style>
 </head>
 <body>
-  <nav id="nav">
-    <span class="nav-brand">🌀 Storm Tracker VN</span>
-    <a href="/" class="nav-link">📚 Lịch sử bão</a>
-    <a href="/realtime" class="nav-link">📡 Thời gian thực</a>
-    <a href="/dashboard" class="nav-link active">📊 Dashboard</a>
-    <span class="nav-right">ĐATN 2025.2 · Đặng Hồng Minh · 20225740</span>
-  </nav>
+  {% include "partials/navbar.html" %}
   <main>
     <section class="hero">
       <h1>Dashboard Phân tích Bão Việt Nam</h1>
-      <p>M4 · Xu hướng dài hạn, mùa vụ, phân bố cấp bão và vùng ảnh hưởng từ dữ liệu IBTrACS.</p>
+      <p>Xu hướng dài hạn, mùa vụ, phân bố cấp bão và vùng ảnh hưởng từ dữ liệu IBTrACS.</p>
     </section>
     <div class="wrap" id="app"><div class="loading">Đang tải thống kê...</div></div>
   </main>
@@ -120,7 +103,7 @@ function render(data) {
 
     <div class="note">
       Ghi chú: vùng Bắc/Trung/Nam Bộ được ước lượng từ các điểm track đi qua vùng biển gần Việt Nam
-      (8°N–24.5°N, 102°E–116.5°E). Dashboard này phục vụ phân tích định hướng và demo M4;
+      (8°N–24.5°N, 102°E–116.5°E). Dashboard này phục vụ phân tích định hướng;
       nếu cần kết luận theo tỉnh đổ bộ chính xác, cần bổ sung dữ liệu ranh giới/đổ bộ chi tiết hơn.
     </div>`;
 

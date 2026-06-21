@@ -1,10 +1,10 @@
-# Kich Ban Demo 10-15 Phut
+﻿# Kich Ban Demo 10-15 Phut
 
 ## 0. Chuan Bi
 
 - Chay local: `python app.py`.
-- Mo san 4 tab: `/`, `/realtime`, `/dashboard`, `/api/status`.
-- Neu internet loi, dung fallback Yagi 2024 o M2.
+- Mo san 5 tab: `/`, `/realtime`, `/dashboard`, `/seasonal-forecast`, `/api/status`.
+- Neu internet loi, dung fallback Yagi 2024 o trang theo doi thoi gian thuc.
 
 ## 1. Gioi Thieu He Thong (1 phut)
 
@@ -12,9 +12,9 @@ Noi ngan gon:
 
 - De tai xay dung WebGIS theo doi, phan tich va so sanh bao anh huong den vung bien Viet Nam.
 - Du lieu lich su tu IBTrACS/NOAA, du lieu gan thoi gian thuc tu JMA/IBTrACS NRT, fallback Yagi 2024 de dam bao demo.
-- He thong gom M1 lich su, M2 realtime, M3 similarity, M4 dashboard.
+- He thong gom Bản đồ lịch sử lich su, theo dõi thời gian thực realtime, tìm bão tương tự similarity, dashboard phân tích dashboard va dự báo mùa du bao mua bao 2026.
 
-## 2. M1 - Ban Do Lich Su (3 phut)
+## 2. Bản đồ lịch sử - Ban Do Lich Su (3 phut)
 
 Thao tac:
 
@@ -29,11 +29,11 @@ Diem can noi:
 - Khi chon mot bao, cac bao khac duoc an de quan sat ro hon.
 - Co animation phat lai duong di.
 
-## 3. M3 - Tim Bao Tuong Tu (2 phut)
+## 3. tìm bão tương tự - Tim Bao Tuong Tu (2 phut)
 
 Thao tac:
 
-- Tu panel bao dang chon, bam `Tim bao lich su tuong tu (M3)`.
+- Tu panel bao dang chon, bam `Tim bao lich su tuong tu `.
 - Giai thich bang top-5.
 
 Diem can noi:
@@ -42,7 +42,7 @@ Diem can noi:
 - Cosine/multi-factor bo sung huong di, centroid, thang mua bao, gio cuc dai.
 - `combined_score` giup xep hang tong hop.
 
-## 4. M2 - Theo Doi Thoi Gian Thuc (3 phut)
+## 4. theo dõi thời gian thực - Theo Doi Thoi Gian Thuc (3 phut)
 
 Thao tac:
 
@@ -57,7 +57,7 @@ Diem can noi:
 - Khi JMA/IBTrACS khong co bao hoac loi, he thong fallback sang Yagi 2024.
 - Muc tieu la he thong khong chet im lang khi nguon du lieu ngoai bat on.
 
-## 5. M4 - Dashboard Phan Tich (3 phut)
+## 5. dashboard phân tích - Dashboard Phan Tich (3 phut)
 
 Thao tac:
 
@@ -73,9 +73,15 @@ Diem can noi:
 
 ## 6. Ket Thuc (1 phut)
 
+Neu can nhan manh huong phat trien moi, mo `/seasonal-forecast` truoc khi ket thuc:
+
+- Giai thich model dung climatology IBTrACS 1981-2025 ket hop kich ban ENSO/SST 2026.
+- Chi vao bang theo thang: so con ky vong, xac suat vung hinh thanh, xac suat vung anh huong Bac/Trung/Nam.
+- Noi ro day la outlook xac suat phuc vu nghien cuu/demo, khong thay the ban tin du bao chinh thuc.
+
 Tong ket:
 
-- He thong dap ung truc quan hoa lich su, theo doi gan thoi gian thuc, so sanh quy dao va dashboard phan tich.
+- He thong dap ung truc quan hoa lich su, theo doi gan thoi gian thuc, so sanh quy dao, dashboard phan tich va du bao xac suat theo mua.
 - Huong phat trien: bo sung canh bao vung ven bien Viet Nam, du bao cone bat dinh, thong ke do bo theo tinh chinh xac hon.
 
 ## Phuong An Du Phong

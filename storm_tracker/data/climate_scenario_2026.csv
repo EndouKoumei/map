@@ -1,0 +1,13 @@
+year,month,enso_phase,oni,very_strong_el_nino_probability,sst_scs_anom_c,sst_phil_anom_c,source_note
+2026,1,Neutral,,,,,Historical month already passed; not used for forward outlook
+2026,2,Neutral,,,,,Historical month already passed; not used for forward outlook
+2026,3,Neutral,,,,,Historical month already passed; not used for forward outlook
+2026,4,Neutral,,,,,Historical month already passed; not used for forward outlook
+2026,5,Neutral,,,,,Historical month already passed; not used for forward outlook
+2026,6,El Nino,0.7,0.63,,,NOAA CPC 2026-06-11: El Nino Advisory; weekly Nino-3.4 about +0.7C; 63 percent chance very strong Nov-Jan
+2026,7,El Nino,0.9,0.63,,,Scenario extension from NOAA CPC strengthening outlook
+2026,8,El Nino,1.1,0.63,,,Scenario extension from NOAA CPC strengthening outlook
+2026,9,El Nino,1.4,0.63,,,Scenario extension from NOAA CPC strengthening outlook
+2026,10,El Nino,1.7,0.63,,,Scenario extension from NOAA CPC strengthening outlook
+2026,11,El Nino,2.0,0.63,,,Scenario extension from NOAA CPC 63 percent very strong Nov-Jan outlook
+2026,12,El Nino,2.0,0.63,,,Scenario extension from NOAA CPC 63 percent very strong Nov-Jan outlook

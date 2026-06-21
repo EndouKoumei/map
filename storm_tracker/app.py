@@ -11,8 +11,9 @@ from flask_cors import CORS
 
 import backend.similarity as similarity
 from backend.fetcher import StormRealtimeFetcher
+from backend.seasonal_forecast import build_seasonal_forecast
 from backend.similarity import find_similar
-from scripts import m1_process_data
+from scripts import process_historical_data
 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -89,9 +90,9 @@ def ensure_historical_data(force=False):
 
         _historical_last_attempt = time.time()
         try:
-            csv_path = m1_process_data.download_from_noaa(force=force)
+            csv_path = process_historical_data.download_from_noaa(force=force)
             os.makedirs(os.path.dirname(HISTORICAL_PATH), exist_ok=True)
-            m1_process_data.process(csv_path, HISTORICAL_PATH)
+            process_historical_data.process(csv_path, HISTORICAL_PATH)
             similarity.clear_cache()
             _historical_last_result = {
                 "checked": True,
@@ -120,7 +121,6 @@ def ensure_historical_data(force=False):
 
 
 def _load_historical_features():
-    ensure_historical_data(force=False)
     if not os.path.exists(HISTORICAL_PATH):
         return []
     with open(HISTORICAL_PATH, "r", encoding="utf-8") as f:
@@ -263,38 +263,44 @@ def build_dashboard_stats():
 
 @app.route("/")
 def home():
-    return render_template("m1_map.html")
+    return render_template("historical_map.html", active_page="historical")
 
 
 @app.route("/historical")
 def historical():
-    return render_template("m1_map.html")
+    return render_template("historical_map.html", active_page="historical")
 
 
 @app.route("/realtime")
 def realtime():
-    return render_template("index.html")
+    return render_template("index.html", active_page="realtime", nav_fixed=True)
 
 
 @app.route("/dashboard")
 def dashboard():
-    return render_template("m4_dashboard.html")
+    return render_template("dashboard.html", active_page="dashboard")
+
+
+@app.route("/seasonal-forecast")
+def seasonal_forecast_page():
+    return render_template("seasonal_forecast.html", active_page="seasonal_forecast")
 
 
 @app.route("/api/historical-storms")
 def historical_storms():
-    try:
-        ensure_historical_data(force=request.args.get("refresh") == "1")
-    except RuntimeError as exc:
-        return jsonify({
-            "error": str(exc),
-            "fix": "Kiem tra internet hoac chay: python scripts/m1_process_data.py",
-        }), 503
+    if request.args.get("refresh") == "1":
+        try:
+            ensure_historical_data(force=True)
+        except RuntimeError as exc:
+            return jsonify({
+                "error": str(exc),
+                "fix": "Kiem tra internet hoac chay: python scripts/process_historical_data.py",
+            }), 503
 
     if not os.path.exists(HISTORICAL_PATH):
         return jsonify({
             "error": "Chua co du lieu lich su.",
-            "fix": "Chay lenh: python scripts/m1_process_data.py",
+            "fix": "Chay lenh: python scripts/process_historical_data.py",
         }), 404
 
     return send_file(HISTORICAL_PATH, mimetype="application/json", as_attachment=False)
@@ -311,8 +317,8 @@ def update_historical():
             "force": force,
             "geojson_path": HISTORICAL_PATH,
             "geojson_age_days": _file_age_days(HISTORICAL_PATH),
-            "csv_cache_path": m1_process_data.CACHE_FILE,
-            "csv_cache_age_days": _file_age_days(m1_process_data.CACHE_FILE),
+            "csv_cache_path": process_historical_data.CACHE_FILE,
+            "csv_cache_age_days": _file_age_days(process_historical_data.CACHE_FILE),
         }), status_code
     except RuntimeError as exc:
         return jsonify({
@@ -369,6 +375,15 @@ def dashboard_stats():
         return jsonify({"error": str(exc)}), 500
 
 
+@app.route("/api/seasonal-forecast")
+def seasonal_forecast():
+    try:
+        year = int(request.args.get("year", 2026))
+        return jsonify(build_seasonal_forecast(year=year))
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
 @app.route("/api/status")
 def status():
     historical_ok = os.path.exists(HISTORICAL_PATH)
@@ -378,19 +393,19 @@ def status():
     )
     return jsonify({
         "system": "Storm Tracker VN",
-        "version": "2.2 (M1+M2+M3+M4)",
-        "modules": {
-            "M1_historical": {
+        "version": "2.3",
+        "features": {
+            "historical_tracking": {
                 "status": "ready" if historical_ok else "no_data",
                 "file_size_mb": historical_size,
                 "geojson_age_days": _file_age_days(HISTORICAL_PATH),
-                "csv_cache_age_days": _file_age_days(m1_process_data.CACHE_FILE),
+                "csv_cache_age_days": _file_age_days(process_historical_data.CACHE_FILE),
                 "cache_days": HISTORICAL_CACHE_DAYS,
                 "auto_update": "lazy_on_api_request",
                 "last_update_check": _historical_last_result,
                 "endpoint": "/api/historical-storms",
             },
-            "M2_realtime": {
+            "realtime_tracking": {
                 "status": "ready",
                 "last_update": fetcher.last_update,
                 "storm_count": fetcher.storm_count,
@@ -398,15 +413,21 @@ def status():
                 "cache_seconds": fetcher.CACHE_SEC,
                 "endpoint": "/api/active-storms",
             },
-            "M3_similarity": {
+            "storm_similarity": {
                 "status": "ready" if historical_ok else "no_data",
                 "method": "DTW + cosine multi-factor score",
                 "endpoint": "/api/similar-storms/<storm_id>",
             },
-            "M4_dashboard": {
+            "analytics_dashboard": {
                 "status": "ready" if historical_ok else "no_data",
                 "endpoint": "/api/dashboard-stats",
                 "page": "/dashboard",
+            },
+            "seasonal_forecast": {
+                "status": "ready" if historical_ok else "no_data",
+                "method": "climatology + ENSO/SST scenario",
+                "endpoint": "/api/seasonal-forecast?year=2026",
+                "page": "/seasonal-forecast",
             },
         },
     })
@@ -414,11 +435,12 @@ def status():
 
 if __name__ == "__main__":
     print("\n" + "=" * 50)
-    print("  Storm Tracker VN - v2.2 (M1 + M2 + M3 + M4)")
+    print("  Storm Tracker VN - v2.3")
     print("=" * 50)
-    print("  M1 historical: http://localhost:5000/")
-    print("  M2 realtime:   http://localhost:5000/realtime")
-    print("  M4 dashboard:  http://localhost:5000/dashboard")
+    print("  Historical map: http://localhost:5000/")
+    print("  Realtime:       http://localhost:5000/realtime")
+    print("  Dashboard:      http://localhost:5000/dashboard")
+    print("  Forecast:       http://localhost:5000/seasonal-forecast")
     print("  API status:    http://localhost:5000/api/status")
     print("=" * 50 + "\n")
     app.run(debug=True, host="0.0.0.0", port=5000)
