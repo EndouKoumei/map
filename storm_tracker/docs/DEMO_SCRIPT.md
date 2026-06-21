@@ -1,90 +1,66 @@
-﻿# Kich Ban Demo 10-15 Phut
+# Kich Ban Demo 10-15 Phut
 
-## 0. Chuan Bi
+## Chuan Bi
 
-- Chay local: `python app.py`.
-- Mo san 5 tab: `/`, `/realtime`, `/dashboard`, `/seasonal-forecast`, `/api/status`.
-- Neu internet loi, dung fallback Yagi 2024 o trang theo doi thoi gian thuc.
+- Chay `python app.py`.
+- Mo san: `/`, `/realtime`, `/dashboard`, `/seasonal-forecast` va `/api/status`.
+- Neu nguon realtime loi, dung fallback Yagi 2024 de tiep tuc demo.
 
-## 1. Gioi Thieu He Thong (1 phut)
+## Gioi Thieu (1 Phut)
 
-Noi ngan gon:
+Gioi thieu Storm Tracker VN la WebGIS ho tro tra cuu lich su, theo doi gan thoi
+gian thuc, so sanh quy dao, phan tich thong ke va outlook xac suat mua bao.
 
-- De tai xay dung WebGIS theo doi, phan tich va so sanh bao anh huong den vung bien Viet Nam.
-- Du lieu lich su tu IBTrACS/NOAA, du lieu gan thoi gian thuc tu JMA/IBTrACS NRT, fallback Yagi 2024 de dam bao demo.
-- He thong gom Bản đồ lịch sử lich su, theo dõi thời gian thực realtime, tìm bão tương tự similarity, dashboard phân tích dashboard va dự báo mùa du bao mua bao 2026.
+## Ban Do Lich Su (3 Phut)
 
-## 2. Bản đồ lịch sử - Ban Do Lich Su (3 phut)
+1. Mo `/`, loc nam 1960-2026 va chuyen Track/Heatmap/Thong ke.
+2. Chon mot duong di bao bat ky.
+3. Chi ra quy dao gradient theo cuong do, animation va panel chi tiet.
+4. Dong panel de hien lai toan bo quy dao.
 
-Thao tac:
+Nhan manh: khi chon mot bao, cac bao khac an di de quan sat ro hon; nhan vao bat
+ky doan nao cua quy dao deu co the mo thong tin bao.
 
-- Mo `/`.
-- Loc nam 1960-2026, chon tat ca cap bao.
-- Chuyen Track/Heatmap/Thong ke.
-- Click vao mot duong di bao.
+## Tim Bao Tuong Tu (2 Phut)
 
-Diem can noi:
+1. Tu panel bao da chon, bam `Tim bao lich su tuong tu`.
+2. Mo bang top-5 va cac quy dao so sanh.
 
-- Track co gradient theo cuong do tung doan, dung phan cap Viet Nam.
-- Khi chon mot bao, cac bao khac duoc an de quan sat ro hon.
-- Co animation phat lai duong di.
+Nhan manh: DTW so sanh hinh dang quy dao; diem tong hop bo sung huong di,
+centroid, thang mua bao va gio cuc dai.
 
-## 3. tìm bão tương tự - Tim Bao Tuong Tu (2 phut)
+## Theo Doi Thoi Gian Thuc (3 Phut)
 
-Thao tac:
+1. Mo `/realtime` va bam lam moi.
+2. Chon bao dang co hoac Yagi mau khi nguon ngoai khong san sang.
+3. Mo panel thong tin va quy dao du bao neu nguon co cung cap.
 
-- Tu panel bao dang chon, bam `Tim bao lich su tuong tu `.
-- Giai thich bang top-5.
+Nhan manh: fallback giup trang van hoat dong khi JMA/IBTrACS khong phan hoi. Neu
+JMA khong cung cap gio hoac ap suat, giao dien hien thi trang thai chua co so lieu.
 
-Diem can noi:
+## Dashboard Phan Tich (2 Phut)
 
-- DTW so sanh hinh dang/quy dao theo chuoi toa do.
-- Cosine/multi-factor bo sung huong di, centroid, thang mua bao, gio cuc dai.
-- `combined_score` giup xep hang tong hop.
+1. Mo `/dashboard`.
+2. Chi vao KPI tong so bao, khoang nam du lieu va gio lon nhat.
+3. Mo bieu do theo thang, thap ky, phan cap va vung.
 
-## 4. theo dõi thời gian thực - Theo Doi Thoi Gian Thuc (3 phut)
+Nhan manh: phan vung Bac/Trung/Nam la xap xi theo toa do quy dao, khong thay the
+thong ke do bo theo tinh.
 
-Thao tac:
+## Outlook Mua Bao (2 Phut)
 
-- Mo `/realtime`.
-- Bam Lam moi.
-- Click bao Yagi mau hoac bao that neu co.
-- Mo du bao duong di neu co.
+1. Mo `/seasonal-forecast`.
+2. Chi vao so con ky vong theo thang, phan bo 0/1/2/3+ con va bang outlook.
+3. Giai thich vung hinh thanh/anh huong chinh va kich ban ENSO.
 
-Diem can noi:
-
-- API luon tra JSON hop le.
-- Khi JMA/IBTrACS khong co bao hoac loi, he thong fallback sang Yagi 2024.
-- Muc tieu la he thong khong chet im lang khi nguon du lieu ngoai bat on.
-
-## 5. dashboard phân tích - Dashboard Phan Tich (3 phut)
-
-Thao tac:
-
-- Mo `/dashboard`.
-- Chi vao KPI tong 2,343 bao, 1884-2026, max 170 kt.
-- Mo bieu do thang, thap ky, phan cap, vung.
-
-Diem can noi:
-
-- Mua bao tap trung manh tu thang 7 den thang 10, dinh la thang 9.
-- Sau nam 2000, ti le sieu bao trong tap du lieu cao hon giai doan truoc 2000.
-- Phan vung Bac/Trung/Nam la xap xi theo toa do, khong thay the thong ke do bo theo tinh.
-
-## 6. Ket Thuc (1 phut)
-
-Neu can nhan manh huong phat trien moi, mo `/seasonal-forecast` truoc khi ket thuc:
-
-- Giai thich model dung climatology IBTrACS 1981-2025 ket hop kich ban ENSO/SST 2026.
-- Chi vao bang theo thang: so con ky vong, xac suat vung hinh thanh, xac suat vung anh huong Bac/Trung/Nam.
-- Noi ro day la outlook xac suat phuc vu nghien cuu/demo, khong thay the ban tin du bao chinh thuc.
-
-Tong ket:
-
-- He thong dap ung truc quan hoa lich su, theo doi gan thoi gian thuc, so sanh quy dao, dashboard phan tich va du bao xac suat theo mua.
-- Huong phat trien: bo sung canh bao vung ven bien Viet Nam, du bao cone bat dinh, thong ke do bo theo tinh chinh xac hon.
+Nhan manh: day la outlook xac suat tu climatology 1981-2025 va kich ban khi hau.
+No khong du bao tung con bao, khong thay the ban tin chinh thuc. Khi trinh bay giua
+nam 2026, chi dien giai cac thang chua qua; cot SST trong nghia la chua co dieu
+chinh SST thuc te.
 
 ## Phuong An Du Phong
 
-- Neu internet loi: demo local va fallback Yagi.
-- Neu nguon realtime khong co bao: giai thich day la thiet ke fallback de demo on dinh.
+- Neu Railway bao loi, kiem tra `/api/status` truoc.
+- Neu ban do lich su khong tai, kiem tra `/api/historical-storms`; endpoint nay
+  phai tra GeoJSON co san va khong tu tai NOAA trong request hien thi.
+- Neu realtime khong co bao, demo Yagi mau va giai thich co che fallback.

@@ -1,91 +1,100 @@
-﻿# Storm Tracker VN
+# Storm Tracker VN
 
-WebGIS hỗ trợ tra cứu lịch sử bão, theo dõi gần thời gian thực, tìm bão tương tự và xem dashboard phân tích cho vùng biển Việt Nam.
+WebGIS tra cuu lich su bao, theo doi bao gan thoi gian thuc, tim quy dao tuong tu,
+phan tich thong ke va xem outlook xac suat mua bao cho khu vuc Viet Nam.
 
-## Cấu Trúc Thư Mục
+## Chuc Nang
+
+| Chuc nang | Duong dan | Mo ta |
+| --- | --- | --- |
+| Ban do lich su | `/` | Loc du lieu, quy dao theo cuong do, heatmap, animation va thong tin bao. |
+| Theo doi thoi gian thuc | `/realtime` | Du lieu JMA/IBTrACS NRT va fallback Yagi 2024 khi nguon ngoai khong san sang. |
+| Tim bao tuong tu | Trong ban do lich su | DTW ket hop diem huong di, vi tri, mua bao va gio cuc dai. |
+| Dashboard phan tich | `/dashboard` | Xu huong theo thap ky, mua vu, phan cap va vung anh huong gan Viet Nam. |
+| Outlook mua bao | `/seasonal-forecast` | Uoc luong xac suat theo thang tu lich su va kich ban ENSO/SST. |
+
+## Cau Truc Thu Muc
 
 ```text
 storm_tracker/
-|-- app.py                  # Flask app, routes và API
-|-- backend/                # Logic lấy dữ liệu realtime và so sánh bão
-|-- data/                   # Dữ liệu GeoJSON dùng cho lịch sử, tương tự và dashboard
-|-- frontend/               # Giao diện HTML/CSS/JS
-|-- scripts/                # Script xử lý/cập nhật dữ liệu lịch sử
+|-- app.py                  # Flask routes va API
+|-- backend/                # Xu ly realtime, tuong tu va outlook mua bao
+|-- data/                   # GeoJSON lich su va kich ban khi hau
+|-- frontend/               # HTML, CSS va JavaScript
+|-- scripts/                # Xu ly/cap nhat du lieu lich su
 |-- tests/                  # Pytest
-|-- docs/                   # Tài liệu demo, kiểm thử, kết quả phân tích
+|-- docs/                   # Tai lieu demo, kiem thu va phan tich
 |-- requirements.txt
-`-- README.md
+`-- Procfile                # Lenh chay tren Railway/Render
 ```
 
-## Module Chính
+## Chay Local
 
-| Module | Trang | Nội dung |
-| --- | --- | --- |
-| Bản đồ lịch sử | `/` | Bản đồ lịch sử bão, lọc dữ liệu, track gradient, heatmap, animation |
-| theo dõi thời gian thực | `/realtime` | Theo dõi bão gần thời gian thực, có fallback Yagi 2024 |
-| tìm bão tương tự | Trong Bản đồ lịch sử | Tìm bão lịch sử tương tự bằng DTW và điểm tổng hợp |
-| dashboard phân tích | `/dashboard` | Dashboard xu hướng theo thập kỷ, mùa vụ, cấp bão và vùng |
-| dự báo mùa | `/seasonal-forecast` | Dự báo xác suất mùa bão 2026 theo tháng, ENSO/SST scenario |
-
-## Chạy Local
-
-```bash
+```powershell
 python -m venv venv
 venv\Scripts\activate
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 python app.py
 ```
 
-Các trang chính:
+Mo cac trang:
 
-- Bản đồ lịch sử: `http://localhost:5000/`
-- Theo dõi thời gian thực: `http://localhost:5000/realtime`
-- Dashboard phân tích: `http://localhost:5000/dashboard`
-- Dự báo mùa: `http://localhost:5000/seasonal-forecast`
-- API status: `http://localhost:5000/api/status`
+- Ban do lich su: `http://localhost:5000/`
+- Theo doi thoi gian thuc: `http://localhost:5000/realtime`
+- Dashboard: `http://localhost:5000/dashboard`
+- Outlook mua bao: `http://localhost:5000/seasonal-forecast`
+- Trang thai API: `http://localhost:5000/api/status`
 
-## Cập Nhật Dữ Liệu Lịch Sử
+## Du Lieu Lich Su
 
-```bash
+Tao hoac cap nhat GeoJSON tu IBTrACS/NOAA:
+
+```powershell
 python scripts/process_historical_data.py
 python scripts/process_historical_data.py --force
 ```
 
-Output mặc định: `data/storms_vn.geojson`.
+Tep dau ra mac dinh la `data/storms_vn.geojson`.
 
-## Kiểm Thử
+Khi deploy, `/api/historical-storms` chi phuc vu GeoJSON dang co. Cach nay tranh
+timeout khi NOAA cham hoac khong truy cap duoc. Chi goi cap nhat chu dong khi can:
 
-```bash
-python -m py_compile app.py backend\fetcher.py backend\similarity.py scripts\process_historical_data.py
-python -m pytest tests -q
+```text
+GET /api/update-historical?force=1
 ```
 
-Checklist chi tiết: [docs/TESTING.md](docs/TESTING.md).
+## Kiem Thu
 
-## API Chính
+```powershell
+python -m py_compile app.py backend\fetcher.py backend\similarity.py scripts\process_historical_data.py
+python -m pytest tests -q -o cache_dir=$env:TEMP\storm_tracker_pytest_cache
+```
 
-| Endpoint | Mô tả |
+Checklist chi tiet: [docs/TESTING.md](docs/TESTING.md).
+
+## API Chinh
+
+| Endpoint | Mo ta |
 | --- | --- |
-| `GET /api/status` | Trạng thái hệ thống và module |
-| `GET /api/historical-storms` | GeoJSON bão lịch sử |
-| `GET /api/update-historical?force=1` | Cập nhật dữ liệu IBTrACS |
-| `GET /api/active-storms` | Bão đang hoạt động hoặc dữ liệu mẫu |
-| `GET /api/forecast/<storm_id>` | Dự báo của bão nếu có |
-| `GET /api/similar-storms/<storm_id>` | Top bão lịch sử tương tự |
-| `GET /api/dashboard-stats` | Số liệu dashboard phân tích |
-| `GET /api/seasonal-forecast?year=2026` | Dự báo xác suất mùa bão 2026 |
+| `GET /api/status` | Trang thai cac chuc nang va cache du lieu. |
+| `GET /api/historical-storms` | GeoJSON bao lich su dang co. |
+| `GET /api/update-historical?force=1` | Cap nhat IBTrACS theo yeu cau. |
+| `GET /api/active-storms` | Bao dang hoat dong hoac fallback. |
+| `GET /api/forecast/<storm_id>` | Quy dao du bao neu nguon co cung cap. |
+| `GET /api/similar-storms/<storm_id>` | Top bao lich su tuong tu. |
+| `GET /api/dashboard-stats` | So lieu dashboard phan tich. |
+| `GET /api/seasonal-forecast?year=2026` | Outlook xac suat mua bao theo thang. |
 
-## Tài Liệu Hỗ Trợ Bảo Vệ
+## Luu Y Ve Outlook Mua Bao
 
-- [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md): kịch bản demo 10-15 phút.
-- [docs/REPORT_FINDINGS.md](docs/REPORT_FINDINGS.md): kết luận phân tích dữ liệu.
-- [docs/TESTING.md](docs/TESTING.md): kế hoạch kiểm thử.
-- [docs/SEASONAL_FORECAST.md](docs/SEASONAL_FORECAST.md): mô tả model dự báo mùa bão 2026.
+Outlook mua bao la model thong ke phuc vu nghien cuu va demo. No khong du bao
+duong di, cuong do hay thoi diem cua tung con bao, va khong thay the ban tin cua co
+quan khi tuong. Xem [docs/SEASONAL_FORECAST.md](docs/SEASONAL_FORECAST.md) de biet
+data dau vao, cach dien giai va gioi han.
 
-## Ghi Chú
+## Tai Lieu Ho Tro
 
-- Phân cấp bão dùng nhóm: áp thấp nhiệt đới, bão thường, bão mạnh, bão rất mạnh, siêu bão.
-- theo dõi thời gian thực dùng JMA và IBTrACS NRT; nếu nguồn ngoài lỗi hoặc không có bão, hệ thống dùng dữ liệu mẫu Yagi 2024.
-- Bản đồ lịch sử luôn phục vụ GeoJSON đang có để tránh timeout khi deploy; chỉ cập nhật NOAA khi gọi `GET /api/update-historical?force=1`.
-- dự báo mùa là model thử nghiệm phục vụ đồ án, không thay thế dự báo chính thức của cơ quan khí tượng.
-- Phần deploy public và khảo sát người dùng không nằm trong phạm vi bắt buộc của đồ án cử nhân hiện tại.
+- [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md): kich ban demo 10-15 phut.
+- [docs/REPORT_FINDINGS.md](docs/REPORT_FINDINGS.md): ket qua phan tich lich su.
+- [docs/TESTING.md](docs/TESTING.md): ke hoach kiem thu.
+- [docs/SEASONAL_FORECAST.md](docs/SEASONAL_FORECAST.md): mo ta outlook mua bao.

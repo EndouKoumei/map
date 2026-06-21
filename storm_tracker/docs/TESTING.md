@@ -16,7 +16,7 @@ Pham vi test hien co:
 - Phan cap bao theo thang Viet Nam.
 - DTW/Cosine similarity tra dung `top_k`, khong tra lai chinh target.
 - Fallback theo dõi thời gian thực khi nguon that loi.
-- API smoke cho ban do lich su, theo doi thoi gian thuc, tim bao tuong tu va dashboard.
+- API smoke cho ban do lich su, theo doi thoi gian thuc, tim bao tuong tu, dashboard va outlook mua bao.
 
 ## 2. API Smoke Test
 
@@ -73,6 +73,8 @@ Kiem thu tren Chrome va Edge.
 - Kiem tra bieu do so con ky vong theo thang.
 - Kiem tra bang outlook co ENSO, ONI, vung hinh thanh va vung anh huong.
 - Xac nhan ghi chu model thu nghiem hien ro, khong nham voi du bao chinh thuc.
+- Xac nhan chi dien giai cac thang chua qua khi demo outlook trong nam 2026.
+- Neu cot SST trong, xac nhan giao dien/tai lieu khong khang dinh da co dieu chinh SST thuc te.
 
 ## 4. Fallback/Offline Test
 
@@ -86,6 +88,7 @@ Kiem thu tren Chrome va Edge.
 - Chuyen heatmap va track.
 - Thao tac zoom/pan khong bi treo trinh duyet.
 - Neu can ghi so lieu, dung DevTools Performance de chup thoi gian load lan dau.
+- Tren Railway, mo `/api/historical-storms` khi GeoJSON qua 7 ngay; endpoint van phai tra 200 tu file dang co, khong doi tai NOAA trong request.
 
 ## 6. Ghi Nhan Ket Qua
 
