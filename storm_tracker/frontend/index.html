@@ -244,7 +244,7 @@
           <b>JMA</b> - Japan Meteorological Agency<br>
           <b>IBTrACS NRT/NOAA</b> - dữ liệu gần thời gian thực<br>
           Cập nhật mỗi <b>6 giờ</b> tự động<br>
-          Vùng quan sát: <b>0°-30°N, 95°-135°E</b>
+          Vùng quan sát: <b>0°-40°N, 95°-160°E</b>
         </div>
       </div>
     </div>
@@ -281,6 +281,7 @@ const CAT_LABELS   = {
   ty:'Bão rất mạnh',
   sty:'Siêu bão',
 };
+let shouldFitActiveStorms = true;
 function categoryColor(cat, fallback = '#fff') {
   return CAT_COLORS[cat?.css] || CAT_COLORS[String(cat?.code || '').toLowerCase()] || cat?.color || fallback;
 }
@@ -364,6 +365,10 @@ async function loadStorms(forceRefresh = false) {
     currentStorms = data.features || [];
     renderStormList(data);
     renderStormMap(data);
+    if (shouldFitActiveStorms || forceRefresh) {
+      fitMapToActiveStorms(currentStorms);
+      shouldFitActiveStorms = false;
+    }
     updateBadge(data.generated_at);
     setStatus('ok', `${currentStorms.length} cơn bão đang hoạt động · ${data.source || 'unknown'}`);
 
@@ -481,7 +486,24 @@ function renderStormMap(data) {
   }
 }
 
-// Tạo icon nhấp nháy SVG
+function fitMapToActiveStorms(storms) {
+  const points = (storms || [])
+    .map(feature => feature.properties || {})
+    .filter(props => Number.isFinite(Number(props.lat)) && Number.isFinite(Number(props.lon)))
+    .map(props => [Number(props.lat), Number(props.lon)]);
+
+  if (!points.length) return;
+  if (points.length === 1) {
+    map.flyTo(points[0], 6, { animate: true, duration: 0.8 });
+    return;
+  }
+  map.flyToBounds(L.latLngBounds(points), {
+    animate: true,
+    duration: 0.8,
+    maxZoom: 6,
+    padding: [40, 40],
+  });
+}
 function addStormIcon(latlng, props, cat) {
   const col  = categoryColor(cat);
   const size = 36;
