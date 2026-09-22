@@ -23,7 +23,7 @@ Storm Tracker VN là một hệ thống WebGIS phục vụ đồ án tốt nghi�
 
 - Hình ảnh tổng quan bản đồ lịch sử:
 <div align="center">
-<img src="docs/screenshot_historical_map.png" width="700"/>
+<img src="/storm_tracker/docs/screenshot_historical_map.png" width="700"/>
 </div>
 <p align="center"><em>Hình 1: Giao diện bản đồ bão lịch sử</em></p>
 
@@ -92,7 +92,7 @@ storm_tracker/
 
 - Sơ đồ luồng dữ liệu tổng quan:
 <div align="center">
-<img src="docs/data_flow_diagram.png" width="700"/>
+<img src="/storm_tracker/docs/data_flow_diagram.png" width="700"/>
 </div>
 <p align="center"><em>Hình 2: Luồng dữ liệu tổng quan của hệ thống</em></p>
 
@@ -160,7 +160,7 @@ Mở các trang sau trên trình duyệt:
 
 - Screenshot terminal khi server chạy thành công:
 <div align="center">
-<img src="docs/screenshot_server_start.png" width="700"/>
+<img src="/storm_tracker/docs/screenshot_server_start.png" width="700"/>
 </div>
 <p align="center"><em>Hình 3: Server khởi động thành công</em></p>
 
